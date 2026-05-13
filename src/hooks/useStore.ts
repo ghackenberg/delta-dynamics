@@ -1,12 +1,12 @@
 import * as THREE from 'three'
 import { create } from 'zustand'
-import type { BuildingType, AnimalType, LayerType, GameState, Animal } from '../types/game'
-import { GRID_SIZE, TILE_SIZE, BOUNDARY, INITIAL_RESOURCES, BUILDING_SIZES, MANUAL_HEIGHTS } from '../constants/gameConfig'
-import { gridToWorld, getVertexTotalHeight, getBilinearInterpolatedHeight } from '../utils/gameUtils'
-import { updateCellWaterData } from '../systems/waterSystem'
-import { generateInitialTerrain, getRiverCarve } from '../systems/terrainSystem'
+import type { BuildingType, AnimalType, GameState, Animal } from '../types/game'
+import { GRID_SIZE, TILE_SIZE, BOUNDARY, INITIAL_RESOURCES, BUILDING_SIZES } from '../constants/gameConfig'
+import { gridToWorld } from '../utils/gameUtils'
+import { generateInitialTerrain } from '../systems/terrainSystem'
 import { findSafeLandPosition, getRandomSkinTone, getRandomOutfitColor, updateHuman, updateAnimal } from '../systems/entitySystem'
 import { calculateRates, updateConstruction, checkBuildingCost, deductBuildingCost } from '../systems/economySystem'
+import { TerrainManager } from '../managers/TerrainManager'
 
 const createDataTexture = () => {
   const data = new Float32Array(GRID_SIZE * GRID_SIZE * 4)
@@ -20,6 +20,8 @@ const heightTexture = createDataTexture()
 const waterTexture = createDataTexture()
 
 const { vertices: initialVertices, sWater: initialSWater, gWater: initialGWater, tHeight: initialTHeight, aCap: initialACap, rLevel: initialRLevel, buildings: initialBuildings, occupancyGrid: initialOccupancy } = generateInitialTerrain()
+
+TerrainManager.getInstance().initialize(initialVertices)
 
 const initialHumans = [{ id: 'starter', name: 'Leader', position: findSafeLandPosition(initialSWater), rotation: 0, target: null, state: 'IDLE' as const, homeId: null, workplaceId: null, color: getRandomSkinTone(), outfitColor: getRandomOutfitColor() }]
 const initialAnimals: Animal[] = []
@@ -37,46 +39,11 @@ animalConfigs.forEach((config, idx) => {
 export const useStore = create<GameState>((set, get) => ({
   gameTime: 480, day: 1, isNight: false, simulationSpeed: 50, rainIntensity: 0,
   resources: { ...INITIAL_RESOURCES }, rates: { food: 0, wood: 0, stone: 0, gold: 0 },
-  buildings: initialBuildings, occupancyGrid: initialOccupancy, terrainVertices: initialVertices,
+  buildings: initialBuildings, occupancyGrid: initialOccupancy, terrainVertices: initialVertices, terrainVersion: 0,
   sWater: initialSWater, gWater: initialGWater, tHeight: initialTHeight, aCap: initialACap, rLevel: initialRLevel,
   heightTexture, waterTexture,
   humans: initialHumans,
   animals: initialAnimals, aiStatus: 'Idle', isAiLoading: false, aiResponse: '', selectedBuildingType: 'HOUSE', hoveredCell: null,
-
-  getTerrainHeight: (x: number, z: number) => getBilinearInterpolatedHeight(x, z, get().terrainVertices),
-
-  isAreaFlat: (xIdx: number, zIdx: number, w: number, h: number) => {
-    const state = get()
-    if (xIdx < 0 || xIdx + w > GRID_SIZE || zIdx < 0 || zIdx + h > GRID_SIZE) return false
-    const hReference = getVertexTotalHeight(state.terrainVertices[xIdx][zIdx]), epsilon = 0.01
-    for (let i = xIdx; i <= xIdx + w; i++) {
-      for (let j = zIdx; j <= zIdx + h; j++) {
-        if (Math.abs(getVertexTotalHeight(state.terrainVertices[i][j]) - hReference) > epsilon) return false
-      }
-    }
-    return true
-  },
-
-  modifyTerrain: (xIdx: number, zIdx: number, type: LayerType, amount: number) => set((state) => {
-    const newVertices = [...state.terrainVertices]
-    for (let di = 0; di <= 1; di++) {
-      for (let dj = 0; dj <= 1; dj++) {
-        const i = xIdx + di, j = zIdx + dj
-        if (i < 0 || i > GRID_SIZE || j < 0 || j > GRID_SIZE) continue
-        const vertex = [...newVertices[i][j]], lastLayer = vertex[vertex.length - 1]
-        if (lastLayer && lastLayer.type === type) {
-          vertex[vertex.length - 1] = { ...lastLayer, thickness: Math.max(0, lastLayer.thickness + amount) }
-          if (vertex[vertex.length - 1].thickness === 0 && vertex.length > 1) vertex.pop()
-        } else if (amount > 0) vertex.push({ type, thickness: amount })
-        newVertices[i] = [...newVertices[i]]; newVertices[i][j] = vertex
-      }
-    }
-    const tempState: Partial<GameState> = { sWater: state.sWater, gWater: state.gWater, tHeight: state.tHeight, aCap: state.aCap, rLevel: state.rLevel }
-    for (let i = Math.max(0, xIdx - 1); i <= Math.min(GRID_SIZE - 1, xIdx + 1); i++) {
-      for (let j = Math.max(0, zIdx - 1); j <= Math.min(GRID_SIZE - 1, zIdx + 1); j++) updateCellWaterData(i, j, newVertices, tempState, getRiverCarve, MANUAL_HEIGHTS)
-    }
-    return { terrainVertices: newVertices, ...tempState }
-  }),
 
   simulateWater: () => {
     // Now handled on GPU in Terrain.tsx
@@ -96,7 +63,7 @@ export const useStore = create<GameState>((set, get) => ({
     const newAnimals = state.animals.map(animal => updateAnimal(animal, sWater))
 
     const tempState: Partial<GameState> = { sWater: state.sWater, gWater: state.gWater, tHeight: state.tHeight, aCap: state.aCap, rLevel: state.rLevel }
-    const { newBuildings, newVertices, newOccupancy } = updateConstruction(state.buildings, newHumans, state.terrainVertices, state.occupancyGrid, tempState, getRiverCarve, MANUAL_HEIGHTS)
+    const { newBuildings, newOccupancy, terrainChanged } = updateConstruction(state.buildings, newHumans, TerrainManager.getInstance(), state.occupancyGrid, tempState)
 
     let res = { ...state.resources }
     if (!isNight && (state.gameTime % 10 === 0)) {
@@ -113,7 +80,7 @@ export const useStore = create<GameState>((set, get) => ({
       gameTime: newTime, day: newDay, isNight, simulationSpeed: simulationSpeed, 
       rainIntensity: newRainIntensity, humans: finalHumans, animals: newAnimals, 
       buildings: newBuildings, occupancyGrid: newOccupancy, resources: res, rates, 
-      terrainVertices: newVertices, 
+      terrainVersion: terrainChanged ? state.terrainVersion + 1 : state.terrainVersion,
       sWater, gWater,
       tHeight: tempState.tHeight!, aCap: tempState.aCap!
     })
@@ -147,7 +114,7 @@ export const useStore = create<GameState>((set, get) => ({
     }
     if (xIndex + size.width > GRID_SIZE || zIndex + size.height > GRID_SIZE) return state
     for (let i = xIndex; i < xIndex + size.width; i++) for (let j = zIndex; j < zIndex + size.height; j++) if (state.occupancyGrid[i][j] || state.sWater[j * GRID_SIZE + i] > 0.05) return state
-    if (['HOUSE', 'FARM', 'LUMBER_MILL', 'QUARRY'].includes(type) && !get().isAreaFlat(xIndex, zIndex, size.width, size.height)) return state
+    if (['HOUSE', 'FARM', 'LUMBER_MILL', 'QUARRY'].includes(type) && !TerrainManager.getInstance().isAreaFlat(xIndex, zIndex, size.width, size.height)) return state
     
     if (!checkBuildingCost(type, state.resources)) return state 
     

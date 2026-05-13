@@ -6,6 +6,7 @@ import { useStore } from '../../hooks/useStore'
 import { GRID_SIZE, TILE_SIZE, SEA_LEVEL, MATERIAL_PROPERTIES, MAX_GPU_LAYERS, LAYER_ID_MAP } from '../../constants/gameConfig'
 import { WaterComputeSystem } from '../../systems/waterComputeSystem'
 import type { LayerType } from '../../types/game'
+import { TerrainManager } from '../../managers/TerrainManager'
 
 const BILINEAR_GLSL = `
   vec4 bilinear(sampler2D tex, vec2 uv, vec2 res) {
@@ -39,7 +40,7 @@ const BILINEAR_ARRAY_GLSL = `
 
 export const Terrain = () => {
   const { gl } = useThree()
-  const terrainVertices = useStore((state) => state.terrainVertices)
+  const terrainVersion = useStore((state) => state.terrainVersion)
   const sWater = useStore((state) => state.sWater)
   const gWater = useStore((state) => state.gWater)
   const tHeight = useStore((state) => state.tHeight)
@@ -95,6 +96,7 @@ export const Terrain = () => {
 
   // Update terrain texture when vertices change
   useEffect(() => {
+    const terrainVertices = TerrainManager.getInstance().getVertices()
     gpuSim.updateTerrain(terrainVertices, rLevel)
     gpuSim.updateMaterialProperties(layerPorosities, layerPermeabilities)
 
@@ -140,7 +142,7 @@ export const Terrain = () => {
     }
     layerTex.needsUpdate = true
     surfaceTex.needsUpdate = true
-  }, [gpuSim, terrainVertices, rLevel, layerTex, surfaceTex, layerPorosities, layerPermeabilities])
+  }, [gpuSim, terrainVersion, rLevel, layerTex, surfaceTex, layerPorosities, layerPermeabilities])
 
   const uniforms = useMemo(() => ({
     uTerrainLayers: { value: layerTex },

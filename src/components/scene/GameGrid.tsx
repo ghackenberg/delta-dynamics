@@ -1,17 +1,16 @@
 import { useMemo } from 'react'
 import { useStore } from '../../hooks/useStore'
-import { BUILDING_SIZES, BUILDING_COLORS, GRID_SIZE, TILE_SIZE, OFFSET } from '../../constants/gameConfig'
+import { BUILDING_SIZES, BUILDING_COLORS, GRID_SIZE, TILE_SIZE, OFFSET, BOUNDARY } from '../../constants/gameConfig'
 import { Human } from '../entities/Human'
 import { InstancedTrees } from './InstancedTrees'
 import { InstancedAnimals } from '../entities/InstancedAnimals'
+import { TerrainManager } from '../../managers/TerrainManager'
 
 export const GameGrid = () => {
   const buildings = useStore((state) => state.buildings)
   const occupancyGrid = useStore((state) => state.occupancyGrid)
   const sWater = useStore((state) => state.sWater)
   const humans = useStore((state) => state.humans)
-  const getTerrainHeight = useStore((state) => state.getTerrainHeight)
-  const isAreaFlat = useStore((state) => state.isAreaFlat)
   const hoveredCell = useStore((state) => state.hoveredCell)
   const selectedBuildingType = useStore((state) => state.selectedBuildingType)
 
@@ -36,16 +35,18 @@ export const GameGrid = () => {
     }
 
     if (['HOUSE', 'FARM', 'LUMBER_MILL', 'QUARRY'].includes(selectedBuildingType)) {
-      return isAreaFlat(x, z, size.width, size.height)
+      return TerrainManager.getInstance().isAreaFlat(x, z, size.width, size.height)
     }
 
     return true
-  }, [hoveredCell, occupancyGrid, buildings, sWater, selectedBuildingType, isAreaFlat])
+  }, [hoveredCell, occupancyGrid, buildings, sWater, selectedBuildingType])
   
   const buildingMeshes = buildings.filter(b => !['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(b.type)).map((building) => {
     const worldX = (building.x + (building.width - 1) / 2) * TILE_SIZE - OFFSET
     const worldZ = (building.z + (building.height - 1) / 2) * TILE_SIZE - OFFSET
-    const hCenter = getTerrainHeight(worldX, worldZ)
+    const gridX = (worldX + BOUNDARY) / TILE_SIZE
+    const gridZ = (worldZ + BOUNDARY) / TILE_SIZE
+    const hCenter = TerrainManager.getInstance().getInterpolatedHeight(gridX, gridZ)
     
     const colors = BUILDING_COLORS[building.type] || BUILDING_COLORS.DEFAULT
     
@@ -92,7 +93,9 @@ export const GameGrid = () => {
     const size = BUILDING_SIZES[selectedBuildingType] || { width: 1, height: 1 }
     const worldX = (hoveredCell.x + (size.width - 1) / 2) * TILE_SIZE - OFFSET
     const worldZ = (hoveredCell.z + (size.height - 1) / 2) * TILE_SIZE - OFFSET
-    const hCenter = getTerrainHeight(worldX, worldZ)
+    const gridX = (worldX + BOUNDARY) / TILE_SIZE
+    const gridZ = (worldZ + BOUNDARY) / TILE_SIZE
+    const hCenter = TerrainManager.getInstance().getInterpolatedHeight(gridX, gridZ)
     const colors = BUILDING_COLORS[selectedBuildingType] || BUILDING_COLORS.DEFAULT
 
     const isTreeType = ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(selectedBuildingType)

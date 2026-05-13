@@ -66,6 +66,7 @@ export interface GameState {
   buildings: BuildingInstance[]
   occupancyGrid: (string | null)[][] 
   terrainVertices: TerrainVertex[][]
+  terrainVersion: number
   
   // Buffers for simulation (Flattened 100x100)
   sWater: Float32Array
@@ -97,7 +98,4 @@ export interface GameState {
   setRainIntensity: (intensity: number) => void
   spawnHuman: (homeId: string) => void
   spawnAnimal: (type: AnimalType, x?: number, z?: number) => void
-  getTerrainHeight: (x: number, z: number) => number
-  isAreaFlat: (x: number, z: number, w: number, h: number) => boolean
-  modifyTerrain: (xIdx: number, zIdx: number, type: LayerType, amount: number) => void
 }

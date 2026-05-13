@@ -1,6 +1,6 @@
-import type { BuildingInstance, BuildingType, GameResources, Human, TerrainVertex, GameState, LayerType } from '../types/game'
-import { BUILDING_COSTS, GRID_SIZE } from '../constants/gameConfig'
-import { updateCellWaterData } from './waterSystem'
+import type { BuildingInstance, BuildingType, GameResources, Human, GameState, LayerType } from '../types/game'
+import { BUILDING_COSTS } from '../constants/gameConfig'
+import { TerrainManager } from '../managers/TerrainManager'
 
 export const calculateRates = (buildings: BuildingInstance[]): GameResources => {
   const rates = { food: 0, wood: 0, stone: 0, gold: 0 }
@@ -17,15 +17,13 @@ export const calculateRates = (buildings: BuildingInstance[]): GameResources => 
 export const updateConstruction = (
   buildings: BuildingInstance[], 
   humans: Human[], 
-  terrainVertices: TerrainVertex[][], 
+  terrainManager: TerrainManager, 
   occupancyGrid: (string | null)[][],
-  tempState: Partial<GameState>, 
-  getRiverCarve: (i: number, j: number) => number, 
-  MANUAL_HEIGHTS: number[][]
-): { newBuildings: BuildingInstance[], newVertices: TerrainVertex[][], newOccupancy: (string | null)[][] } => {
+  tempState: Partial<GameState>
+): { newBuildings: BuildingInstance[], newOccupancy: (string | null)[][], terrainChanged: boolean } => {
   const newBuildings = [...buildings]
-  const newVertices = [...terrainVertices]
   const newOccupancy = [...occupancyGrid]
+  let terrainChanged = false
 
   newBuildings.forEach((building, bIdx) => {
     if (!building.isReady) {
@@ -39,26 +37,9 @@ export const updateConstruction = (
           if (building.type === 'ROAD') type = 'PAVEMENT'
           else if (building.type === 'DIKE') type = 'GRAVEL'
           
-          for (let di = 0; di <= building.width; di++) {
-            for (let dj = 0; dj <= building.height; dj++) {
-              const i = building.x + di, j = building.z + dj
-              if (i < 0 || i > GRID_SIZE || j < 0 || j > GRID_SIZE) continue
-              const vertex = [...newVertices[i][j]], last = vertex[vertex.length - 1]
-              if (amount < 0) { 
-                vertex[vertex.length - 1] = { ...last, thickness: Math.max(0, last.thickness + amount) }
-                if (vertex[vertex.length-1].thickness <= 0 && vertex.length > 1) vertex.pop() 
-              } else { 
-                if (last?.type === type) vertex[vertex.length-1] = { ...last, thickness: last.thickness + amount }
-                else vertex.push({ type, thickness: amount }) 
-              }
-              newVertices[i] = [...newVertices[i]]; newVertices[i][j] = vertex
-            }
-          }
-          for (let i = Math.max(0, building.x - 1); i <= Math.min(GRID_SIZE - 1, building.x + building.width); i++) {
-            for (let j = Math.max(0, building.z - 1); j <= Math.min(GRID_SIZE - 1, building.z + building.height); j++) {
-              updateCellWaterData(i, j, newVertices, tempState, getRiverCarve, MANUAL_HEIGHTS)
-            }
-          }
+          const changed = terrainManager.modifyArea(building.x, building.z, building.width, building.height, type, amount, tempState)
+          if (changed) terrainChanged = true
+
           const prog = Math.min(100, building.progress + workers * 0.1)
           newBuildings[bIdx] = { ...building, progress: prog, isReady: prog === 100 }
           if (prog === 100 && building.type !== 'ROAD') {
@@ -75,7 +56,7 @@ export const updateConstruction = (
       }
     }
   })
-  return { newBuildings, newVertices, newOccupancy }
+  return { newBuildings, newOccupancy, terrainChanged }
 }
 
 export const checkBuildingCost = (type: BuildingType, resources: GameResources): boolean => {

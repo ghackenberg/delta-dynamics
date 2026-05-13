@@ -1,4 +1,4 @@
-import { TILE_SIZE, OFFSET, BOUNDARY, GRID_SIZE } from '../constants/gameConfig'
+import { TILE_SIZE, OFFSET, BOUNDARY } from '../constants/gameConfig'
 import type { TerrainVertex } from '../types/game'
 import { TERRAIN_BASE_Y } from '../constants/gameConfig'
 
@@ -22,16 +22,4 @@ export const distToSegment = (px: number, pz: number, x1: number, z1: number, x2
 
 export const getVertexTotalHeight = (vertex: TerrainVertex) => {
   return vertex.reduce((sum, layer) => sum + layer.thickness, TERRAIN_BASE_Y)
-}
-
-export const getBilinearInterpolatedHeight = (x: number, z: number, terrainVertices: TerrainVertex[][]) => {
-  const gridX = (x + BOUNDARY) / TILE_SIZE, gridZ = (z + BOUNDARY) / TILE_SIZE
-  const i = Math.floor(gridX), j = Math.floor(gridZ)
-  if (i < 0 || i >= GRID_SIZE || j < 0 || j >= GRID_SIZE) return 0
-  const fx = gridX - i, fz = gridZ - j
-  const h00 = getVertexTotalHeight(terrainVertices[i][j])
-  const h10 = getVertexTotalHeight(terrainVertices[i + 1][j])
-  const h01 = getVertexTotalHeight(terrainVertices[i][j + 1])
-  const h11 = getVertexTotalHeight(terrainVertices[i + 1][j + 1])
-  return (1 - fx) * (1 - fz) * h00 + fx * (1 - fz) * h10 + (1 - fx) * fz * h01 + fx * fz * h11
 }
