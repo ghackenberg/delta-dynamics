@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
-import { GRID_SIZE, TILE_SIZE, SEA_LEVEL, MATERIAL_PROPERTIES } from '../../constants/gameConfig'
+import { GRID_SIZE, TILE_SIZE, SEA_LEVEL, MATERIAL_PROPERTIES, MAX_GPU_LAYERS, LAYER_ID_MAP } from '../../constants/gameConfig'
 import { WaterComputeSystem } from '../../systems/waterComputeSystem'
 import type { LayerType } from '../../types/game'
 
@@ -17,6 +17,21 @@ const BILINEAR_GLSL = `
       vec4 p10 = texture2D(tex, (i + vec2(1.0, 0.0) + 0.5) / res);
       vec4 p01 = texture2D(tex, (i + vec2(0.0, 1.0) + 0.5) / res);
       vec4 p11 = texture2D(tex, (i + vec2(1.0, 1.0) + 0.5) / res);
+
+      return mix(mix(p00, p10, f.x), mix(p01, p11, f.x), f.y);
+  }
+`;
+
+const BILINEAR_ARRAY_GLSL = `
+  vec4 bilinearArray(sampler2DArray tex, vec2 uv, float layer, vec2 res) {
+      vec2 st = uv * res - 0.5;
+      vec2 i = floor(st);
+      vec2 f = fract(st);
+
+      vec4 p00 = texture(tex, vec3((i + vec2(0.0, 0.0) + 0.5) / res, layer));
+      vec4 p10 = texture(tex, vec3((i + vec2(1.0, 0.0) + 0.5) / res, layer));
+      vec4 p01 = texture(tex, vec3((i + vec2(0.0, 1.0) + 0.5) / res, layer));
+      vec4 p11 = texture(tex, vec3((i + vec2(1.0, 1.0) + 0.5) / res, layer));
 
       return mix(mix(p00, p10, f.x), mix(p01, p11, f.x), f.y);
   }
@@ -46,8 +61,10 @@ export const Terrain = () => {
 
   // Initialize stable objects once
   const layerTex = useMemo(() => {
-    const data = new Float32Array((GRID_SIZE + 1) * (GRID_SIZE + 1) * 4)
-    const tex = new THREE.DataTexture(data, GRID_SIZE + 1, GRID_SIZE + 1, THREE.RGBAFormat, THREE.FloatType)
+    const data = new Float32Array((GRID_SIZE + 1) * (GRID_SIZE + 1) * MAX_GPU_LAYERS * 4)
+    const tex = new THREE.DataArrayTexture(data, GRID_SIZE + 1, GRID_SIZE + 1, MAX_GPU_LAYERS)
+    tex.format = THREE.RGBAFormat
+    tex.type = THREE.FloatType
     tex.minFilter = THREE.NearestFilter
     tex.magFilter = THREE.NearestFilter
     return tex
@@ -62,17 +79,17 @@ export const Terrain = () => {
   }, [])
 
   const layerColors = useMemo(() => {
-    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT']
+    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
     return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].color))
   }, [])
 
   const layerPorosities = useMemo(() => {
-    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT']
+    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
     return new Float32Array(types.map(t => MATERIAL_PROPERTIES[t].porosity))
   }, [])
 
   const layerPermeabilities = useMemo(() => {
-    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT']
+    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
     return new Float32Array(types.map(t => MATERIAL_PROPERTIES[t].permeability))
   }, [])
 
@@ -92,23 +109,24 @@ export const Terrain = () => {
         const texIdx = (rowOff + i) * 4
         const layers = terrainVertices[i][j]
         
-        let rock = 0, gravel = 0, sand = 0, humus = 0, pavement = 0
-        layers.forEach(l => {
-          if (l.type === 'ROCK') rock += l.thickness
-          else if (l.type === 'GRAVEL') gravel += l.thickness
-          else if (l.type === 'SAND') sand += l.thickness
-          else if (l.type === 'HUMUS') humus += l.thickness
-          else if (l.type === 'PAVEMENT') pavement += l.thickness
-        })
+        let totalHeight = 0
+        for (let k = 0; k < MAX_GPU_LAYERS; k++) {
+          const layerIdx = (k * size * size + rowOff + i) * 4
+          if (k < layers.length) {
+            const l = layers[k]
+            lData[layerIdx] = LAYER_ID_MAP[l.type]
+            lData[layerIdx + 1] = l.thickness
+            totalHeight += l.thickness
+          } else {
+            lData[layerIdx] = -1.0
+            lData[layerIdx + 1] = 0.0
+          }
+        }
         
-        const topType = layers[layers.length - 1].type
-        const topTypeIdx = topType === 'ROCK' ? 0 : topType === 'GRAVEL' ? 1 : topType === 'SAND' ? 2 : topType === 'HUMUS' ? 3 : 4
-        const height = rock + gravel + sand + humus + pavement - 5.0 // -5 is TERRAIN_BASE_Y
-        
-        lData[texIdx] = rock
-        lData[texIdx + 1] = gravel
-        lData[texIdx + 2] = sand
-        lData[texIdx + 3] = humus
+        const topLayer = layers[layers.length - 1]
+        const topTypeIdx = LAYER_ID_MAP[topLayer.type]
+        const pavementLayer = layers.find(l => l.type === 'PAVEMENT')
+        const height = totalHeight - 5.0 // -5 is TERRAIN_BASE_Y
         
         const gridI = Math.min(i, GRID_SIZE - 1)
         const gridJ = Math.min(j, GRID_SIZE - 1)
@@ -117,7 +135,7 @@ export const Terrain = () => {
         sData[texIdx] = height
         sData[texIdx + 1] = rLevel[gridIdx] || -99
         sData[texIdx + 2] = topTypeIdx
-        sData[texIdx + 3] = pavement
+        sData[texIdx + 3] = pavementLayer ? pavementLayer.thickness : 0.0
       }
     }
     layerTex.needsUpdate = true
@@ -168,7 +186,7 @@ export const Terrain = () => {
       '#include <common>',
       `#include <common>
       uniform sampler2D uTerrainSurface;
-      uniform vec3 uLayerColors[5];
+      uniform vec3 uLayerColors[6];
       varying float vType;
       varying vec2 vGridUv;`
     ).replace(
@@ -245,7 +263,7 @@ export const Terrain = () => {
     shader.vertexShader = shader.vertexShader.replace(
       '#include <common>',
       `#include <common>
-      uniform sampler2D uTerrainLayers;
+      uniform highp sampler2DArray uTerrainLayers;
       uniform sampler2D uTerrainSurface;
       uniform sampler2D waterMap;
       uniform float uTime;
@@ -278,18 +296,19 @@ export const Terrain = () => {
       vWorldY = transformed.y;`
     )
 
-    shader.fragmentShader = shader.fragmentShader.replace(
+    shader.fragmentShader = `#define MAX_LAYERS ${MAX_GPU_LAYERS}\n` + shader.fragmentShader.replace(
       '#include <common>',
       `#include <common>
-      uniform sampler2D uTerrainLayers;
+      precision highp sampler2DArray;
+      uniform sampler2DArray uTerrainLayers;
       uniform sampler2D uTerrainSurface;
       uniform sampler2D waterMap;
-      uniform vec3 uLayerColors[5];
+      uniform vec3 uLayerColors[6];
       varying float vWorldY;
       varying float vSurfaceY;
       varying float vWaterY;
       varying vec2 vGridUv;
-      ${BILINEAR_GLSL}`
+      ${BILINEAR_ARRAY_GLSL}`
     ).replace(
       '#include <color_fragment>',
       `#include <color_fragment>
@@ -301,21 +320,20 @@ export const Terrain = () => {
       ` : `
         vec2 sUv = (vGridUv * 100.0 + 0.5) / 101.0;
         
-        // Smoothly interpolated layer thicknesses
-        vec4 layers = bilinear(uTerrainLayers, sUv, vec2(101.0));
-        
-        // Discrete material type matching the surface cells
-        vec2 cellCoord = floor(vGridUv * 100.0);
-        float cellType = texture2D(uTerrainSurface, (cellCoord + 0.5) / 101.0).b;
-
-        float h = -5.0;
+        float currentH = -5.0;
         vec3 terrainColor = uLayerColors[0];
 
-        if (vWorldY > h + layers.r + layers.g + layers.b + layers.a) terrainColor = uLayerColors[4];
-        else if (vWorldY > h + layers.r + layers.g + layers.b) terrainColor = uLayerColors[3];
-        else if (vWorldY > h + layers.r + layers.g) terrainColor = uLayerColors[2];
-        else if (vWorldY > h + layers.r) terrainColor = uLayerColors[1];
-        else terrainColor = uLayerColors[0];
+        for (int i = 0; i < MAX_LAYERS; i++) {
+            vec4 layerData = bilinearArray(uTerrainLayers, sUv, float(i), vec2(101.0));
+            if (layerData.r < -0.5) break;
+            
+            float nextH = currentH + layerData.g;
+            if (vWorldY <= nextH + 0.001) {
+                terrainColor = uLayerColors[int(layerData.r + 0.5)];
+                break;
+            }
+            currentH = nextH;
+        }
 
         diffuseColor.rgb = terrainColor * 0.7; // Darken sides
       `}

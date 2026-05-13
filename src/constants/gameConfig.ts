@@ -6,6 +6,16 @@ export const TERRAIN_BASE_Y = -5
 export const SEA_LEVEL = -0.8
 export const OFFSET = (GRID_SIZE * TILE_SIZE) / 2 - TILE_SIZE / 2 
 export const BOUNDARY = (GRID_SIZE * TILE_SIZE) / 2 
+export const MAX_GPU_LAYERS = 8
+
+export const LAYER_ID_MAP: Record<LayerType, number> = {
+  ROCK: 0,
+  GRAVEL: 1,
+  SAND: 2,
+  HUMUS: 3,
+  PAVEMENT: 4,
+  WATER: 5
+}
 
 export const BUILDING_SIZES: Record<BuildingType, { width: number, height: number }> = {
   HOUSE: { width: 5, height: 5 },

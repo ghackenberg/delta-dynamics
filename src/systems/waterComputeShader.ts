@@ -1,9 +1,10 @@
 export const waterFragmentShader = `
+precision highp sampler2DArray;
 uniform sampler2D uWater;
-uniform sampler2D uTerrainLayers;  // R: rock, G: gravel, B: sand, A: humus
+uniform sampler2DArray uTerrainLayers; 
 uniform sampler2D uTerrainSurface; // R: height, G: rLevel, B: topType, A: pavement
-uniform float uLayerPorosity[5];
-uniform float uLayerPermeability[5];
+uniform float uLayerPorosity[6];
+uniform float uLayerPermeability[6];
 uniform float uRain;
 uniform float uSeaLevel;
 uniform float uTime;
@@ -14,7 +15,6 @@ void main() {
     vec2 texel = 1.0 / uResolution.xy;
 
     vec4 water = texture2D(uWater, uv);
-    vec4 layers = texture2D(uTerrainLayers, uv);
     vec4 surface = texture2D(uTerrainSurface, uv);
     
     float th = surface.r; // pre-calculated total height for efficiency
@@ -23,12 +23,12 @@ void main() {
     float gw = water.g;
 
     // Calculate aCap based on layer thicknesses and porosities
-    // ROCK: idx 0, GRAVEL: idx 1, SAND: idx 2, HUMUS: idx 3, PAVEMENT: idx 4
-    float ac = layers.r * uLayerPorosity[0] + 
-               layers.g * uLayerPorosity[1] + 
-               layers.b * uLayerPorosity[2] + 
-               layers.a * uLayerPorosity[3] + 
-               surface.a * uLayerPorosity[4];
+    float ac = 0.0;
+    for (int i = 0; i < MAX_LAYERS; i++) {
+        vec4 layerData = texture(uTerrainLayers, vec3(uv, float(i)));
+        if (layerData.r < -0.5) break;
+        ac += layerData.g * uLayerPorosity[int(layerData.r + 0.5)];
+    }
 
     float sL = th + sw;
     float gL = th - 0.5 + (ac > 0.0 ? (gw / ac) : 0.0);
@@ -63,12 +63,12 @@ void main() {
         }
 
         // We also need nAC for nGL
-        vec4 nLayers = texture2D(uTerrainLayers, nUv);
-        float nAC = nLayers.r * uLayerPorosity[0] + 
-                    nLayers.g * uLayerPorosity[1] + 
-                    nLayers.b * uLayerPorosity[2] + 
-                    nLayers.a * uLayerPorosity[3] + 
-                    nSurface.a * uLayerPorosity[4];
+        float nAC = 0.0;
+        for (int i = 0; i < MAX_LAYERS; i++) {
+            vec4 nLayerData = texture(uTerrainLayers, vec3(nUv, float(i)));
+            if (nLayerData.r < -0.5) break;
+            nAC += nLayerData.g * uLayerPorosity[int(nLayerData.r + 0.5)];
+        }
 
         float nGL = nSurface.r - 0.5 + (nAC > 0.0 ? (nWater.g / nAC) : 0.0);
         float gDiff = gL - nGL;
@@ -113,7 +113,7 @@ void main() {
     float perm = uLayerPermeability[topIdx];
     
     if (sw > 0.0 && gw < ac) {
-        float amt = min(sw, min(ac - gw, 0.001 * perm / 0.2)); // Adjusted for permeability (normalized to Humus 0.2)
+        float amt = min(sw, min(ac - gw, 0.001 * perm / 0.2)); 
         sw -= amt;
         gw += amt;
     }
