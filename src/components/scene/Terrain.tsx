@@ -6,6 +6,51 @@ import { useStore } from '../../hooks/useStore'
 import { GRID_SIZE, TILE_SIZE, SEA_LEVEL } from '../../constants/gameConfig'
 import { WaterComputeSystem } from '../../systems/waterComputeSystem'
 
+const BICUBIC_GLSL = `
+  vec4 catmullRom(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float t) {
+      float t2 = t * t;
+      float t3 = t2 * t;
+      return 0.5 * (
+          (2.0 * p1) +
+          (-p0 + p2) * t +
+          (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 +
+          (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
+      );
+  }
+
+  vec4 bicubic(sampler2D tex, vec2 uv, vec2 res) {
+      vec2 st = uv * res - 0.5;
+      vec2 i = floor(st);
+      vec2 f = fract(st);
+
+      vec4 p00 = texture2D(tex, (i + vec2(-1.0, -1.0) + 0.5) / res);
+      vec4 p10 = texture2D(tex, (i + vec2( 0.0, -1.0) + 0.5) / res);
+      vec4 p20 = texture2D(tex, (i + vec2( 1.0, -1.0) + 0.5) / res);
+      vec4 p30 = texture2D(tex, (i + vec2( 2.0, -1.0) + 0.5) / res);
+      vec4 row0 = catmullRom(p00, p10, p20, p30, f.x);
+
+      vec4 p01 = texture2D(tex, (i + vec2(-1.0,  0.0) + 0.5) / res);
+      vec4 p11 = texture2D(tex, (i + vec2( 0.0,  0.0) + 0.5) / res);
+      vec4 p21 = texture2D(tex, (i + vec2( 1.0,  0.0) + 0.5) / res);
+      vec4 p31 = texture2D(tex, (i + vec2( 2.0,  0.0) + 0.5) / res);
+      vec4 row1 = catmullRom(p01, p11, p21, p31, f.x);
+
+      vec4 p02 = texture2D(tex, (i + vec2(-1.0,  1.0) + 0.5) / res);
+      vec4 p12 = texture2D(tex, (i + vec2( 0.0,  1.0) + 0.5) / res);
+      vec4 p22 = texture2D(tex, (i + vec2( 1.0,  1.0) + 0.5) / res);
+      vec4 p32 = texture2D(tex, (i + vec2( 2.0,  1.0) + 0.5) / res);
+      vec4 row2 = catmullRom(p02, p12, p22, p32, f.x);
+
+      vec4 p03 = texture2D(tex, (i + vec2(-1.0,  2.0) + 0.5) / res);
+      vec4 p13 = texture2D(tex, (i + vec2( 0.0,  2.0) + 0.5) / res);
+      vec4 p23 = texture2D(tex, (i + vec2( 1.0,  2.0) + 0.5) / res);
+      vec4 p33 = texture2D(tex, (i + vec2( 2.0,  2.0) + 0.5) / res);
+      vec4 row3 = catmullRom(p03, p13, p23, p33, f.x);
+
+      return catmullRom(row0, row1, row2, row3, f.y);
+  }
+`;
+
 export const Terrain = () => {
   const { gl } = useThree()
   const terrainVertices = useStore((state) => state.terrainVertices)
@@ -65,22 +110,25 @@ export const Terrain = () => {
       `#include <common>
       uniform sampler2D heightMap;
       uniform float uTileSize;
-      varying float vType;`
+      varying float vType;
+      varying vec2 vGridUv;
+      ${BICUBIC_GLSL}`
     ).replace(
       '#include <beginnormal_vertex>',
       `#include <beginnormal_vertex>
       float texelSize = 1.0 / 101.0;
-      float hL = texture2D(heightMap, uv - vec2(texelSize, 0.0)).r;
-      float hR = texture2D(heightMap, uv + vec2(texelSize, 0.0)).r;
-      float hD = texture2D(heightMap, uv - vec2(0.0, texelSize)).r;
-      float hU = texture2D(heightMap, uv + vec2(0.0, texelSize)).r;
+      float hL = bicubic(heightMap, uv - vec2(texelSize, 0.0), vec2(101.0)).r;
+      float hR = bicubic(heightMap, uv + vec2(texelSize, 0.0), vec2(101.0)).r;
+      float hD = bicubic(heightMap, uv - vec2(0.0, texelSize), vec2(101.0)).r;
+      float hU = bicubic(heightMap, uv + vec2(0.0, texelSize), vec2(101.0)).r;
       vec3 slopeX = vec3(2.0 * uTileSize, hR - hL, 0.0);
       vec3 slopeZ = vec3(0.0, hU - hD, 2.0 * uTileSize);
       objectNormal = normalize(cross(slopeZ, slopeX));`
     ).replace(
       '#include <begin_vertex>',
       `#include <begin_vertex>
-      vec4 heightData = texture2D(heightMap, uv);
+      vGridUv = uv;
+      vec4 heightData = bicubic(heightMap, uv, vec2(101.0));
       transformed.y = heightData.r;
       vType = heightData.g;`
     )
@@ -88,14 +136,33 @@ export const Terrain = () => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <common>',
       `#include <common>
-      varying float vType;`
+      varying float vType;
+      varying vec2 vGridUv;`
     ).replace(
       '#include <color_fragment>',
       `#include <color_fragment>
-      vec3 terrainColor = vec3(0.15); // ROCK
-      if (vType < 0.5) terrainColor = vec3(0.12, 0.22, 0.12); // HUMUS
-      else if (vType < 1.5) terrainColor = vec3(0.35, 0.3, 0.2); // SAND
-      else if (vType > 2.5) terrainColor = vec3(0.25, 0.25, 0.25); // PAVEMENT
+      vec3 cHumus = vec3(0.12, 0.22, 0.12);
+      vec3 cSand = vec3(0.35, 0.3, 0.2);
+      vec3 cRock = vec3(0.15, 0.15, 0.15);
+      vec3 cPavement = vec3(0.25, 0.25, 0.25);
+      vec3 terrainColor = cHumus;
+      terrainColor = mix(terrainColor, cSand, smoothstep(0.0, 1.0, vType));
+      terrainColor = mix(terrainColor, cRock, smoothstep(1.0, 2.0, vType));
+      terrainColor = mix(terrainColor, cPavement, smoothstep(2.0, 3.0, vType));
+      
+      // Layer Boundary Contours
+      float distToBorder = abs(fract(vType) - 0.5);
+      float borderLine = 1.0 - smoothstep(0.0, 0.05, distToBorder);
+      // Only show borders between defined layers (avoid borders outside 0-3 range)
+      if (vType > 0.1 && vType < 2.9) {
+          terrainColor = mix(terrainColor, vec3(1.0, 0.9, 0.5), borderLine * 0.5);
+      }
+
+      vec2 grid = fract(vGridUv * 100.0);
+      if (grid.x < 0.05 || grid.y < 0.05) {
+          terrainColor *= 0.5;
+      }
+      
       diffuseColor.rgb = terrainColor;`
     )
   }
@@ -107,11 +174,12 @@ export const Terrain = () => {
       shader.vertexShader = shader.vertexShader.replace(
         '#include <common>',
         `#include <common>
-        uniform sampler2D heightMap;`
+        uniform sampler2D heightMap;
+        ${BICUBIC_GLSL}`
       ).replace(
         '#include <begin_vertex>',
         `#include <begin_vertex>
-        transformed.y = texture2D(heightMap, uv).r;`
+        transformed.y = bicubic(heightMap, uv, vec2(101.0)).r;`
       )
     }
     return mat
@@ -128,12 +196,15 @@ export const Terrain = () => {
       uniform sampler2D heightMap;
       uniform sampler2D waterMap;
       uniform float uTime;
-      varying float vDepth;`
+      varying float vDepth;
+      varying vec2 vGridUv;
+      ${BICUBIC_GLSL}`
     ).replace(
       '#include <begin_vertex>',
       `#include <begin_vertex>
-      float h = texture2D(heightMap, uv).r;
-      float sw = texture2D(waterMap, uv).r;
+      vGridUv = uv;
+      float h = bicubic(heightMap, uv, vec2(101.0)).r;
+      float sw = bicubic(waterMap, uv, vec2(100.0)).r;
       transformed.y = h + sw;
       if (sw > 0.05) {
         transformed.y += sin(uTime * 2.0 + (position.x + position.z) * 5.0) * 0.005;
@@ -144,14 +215,26 @@ export const Terrain = () => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <common>',
       `#include <common>
-      varying float vDepth;`
+      varying float vDepth;
+      varying vec2 vGridUv;`
     ).replace(
       '#include <color_fragment>',
       `#include <color_fragment>
       if (vDepth < 0.02) discard;
       vec3 shallowColor = vec3(0.2, 0.5, 0.8);
       vec3 deepColor = vec3(0.02, 0.1, 0.3);
-      diffuseColor.rgb = mix(shallowColor, deepColor, smoothstep(0.0, 0.5, vDepth));
+      vec3 waterColor = mix(shallowColor, deepColor, smoothstep(0.0, 0.5, vDepth));
+      
+      // Crisp shoreline contour near the discard threshold
+      float shoreLine = 1.0 - smoothstep(0.02, 0.035, vDepth);
+      waterColor = mix(waterColor, vec3(1.0), shoreLine * 0.8);
+      
+      vec2 grid = fract(vGridUv * 100.0);
+      if (grid.x < 0.05 || grid.y < 0.05) {
+          waterColor += vec3(0.1);
+      }
+      
+      diffuseColor.rgb = waterColor;
       diffuseColor.a = smoothstep(0.0, 0.1, vDepth) * 0.7;`
     )
   }
