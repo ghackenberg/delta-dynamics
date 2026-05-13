@@ -1,12 +1,14 @@
 import * as THREE from 'three'
 import { waterFragmentShader } from './waterComputeShader'
 import { GRID_SIZE } from '../constants/gameConfig'
+import type { TerrainVertex, TerrainLayer } from '../types/game'
 
 export class WaterComputeSystem {
     private renderer: THREE.WebGLRenderer
     private renderTargetA: THREE.WebGLRenderTarget
     private renderTargetB: THREE.WebGLRenderTarget
-    private terrainTexture: THREE.DataTexture
+    private terrainLayersTexture: THREE.DataTexture
+    private terrainSurfaceTexture: THREE.DataTexture
     private computeMaterial: THREE.ShaderMaterial
     private scene: THREE.Scene
     private camera: THREE.OrthographicCamera
@@ -28,16 +30,21 @@ export class WaterComputeSystem {
         this.renderTargetA = new THREE.WebGLRenderTarget(GRID_SIZE, GRID_SIZE, options)
         this.renderTargetB = new THREE.WebGLRenderTarget(GRID_SIZE, GRID_SIZE, options)
         
-        // Terrain Texture (Static/Updated on terrain change)
-        const terrainData = new Float32Array(GRID_SIZE * GRID_SIZE * 4)
-        this.terrainTexture = new THREE.DataTexture(terrainData, GRID_SIZE, GRID_SIZE, THREE.RGBAFormat, THREE.FloatType)
-        this.terrainTexture.minFilter = THREE.NearestFilter
-        this.terrainTexture.magFilter = THREE.NearestFilter
+        // Terrain Layers (ROCK, GRAVEL, SAND, HUMUS)
+        this.terrainLayersTexture = new THREE.DataTexture(new Float32Array(GRID_SIZE * GRID_SIZE * 4), GRID_SIZE, GRID_SIZE, THREE.RGBAFormat, THREE.FloatType)
+        this.terrainLayersTexture.minFilter = THREE.NearestFilter
+        this.terrainLayersTexture.magFilter = THREE.NearestFilter
+
+        // Terrain Surface (PAVEMENT, rLevel, topType, height)
+        this.terrainSurfaceTexture = new THREE.DataTexture(new Float32Array(GRID_SIZE * GRID_SIZE * 4), GRID_SIZE, GRID_SIZE, THREE.RGBAFormat, THREE.FloatType)
+        this.terrainSurfaceTexture.minFilter = THREE.NearestFilter
+        this.terrainSurfaceTexture.magFilter = THREE.NearestFilter
 
         this.computeMaterial = new THREE.ShaderMaterial({
             uniforms: {
                 uWater: { value: null },
-                uTerrain: { value: this.terrainTexture },
+                uTerrainLayers: { value: this.terrainLayersTexture },
+                uTerrainSurface: { value: this.terrainSurfaceTexture },
                 uRain: { value: 0 },
                 uSeaLevel: { value: -0.8 },
                 uTime: { value: 0 },
@@ -90,20 +97,42 @@ export class WaterComputeSystem {
         tex.dispose()
     }
 
-    public updateTerrain(tHeight: Float32Array, aCap: Float32Array, rLevel: Float32Array) {
-        const data = this.terrainTexture.image.data as Float32Array
+    public updateTerrain(terrainVertices: TerrainVertex[][], rLevel: Float32Array) {
+        const lData = this.terrainLayersTexture.image.data as Float32Array
+        const sData = this.terrainSurfaceTexture.image.data as Float32Array
+        
         for (let j = 0; j < GRID_SIZE; j++) {
             const rowOff = j * GRID_SIZE
             for (let i = 0; i < GRID_SIZE; i++) {
-                const gridIdx = rowOff + i
                 const texIdx = (rowOff + i) * 4
-                data[texIdx] = tHeight[gridIdx]
-                data[texIdx + 1] = aCap[gridIdx]
-                data[texIdx + 2] = rLevel[gridIdx]
-                data[texIdx + 3] = 1.0
+                const layers = terrainVertices[i][j]
+                
+                let rock = 0, gravel = 0, sand = 0, humus = 0, pavement = 0
+                layers.forEach((l: TerrainLayer) => {
+                    if (l.type === 'ROCK') rock += l.thickness
+                    else if (l.type === 'GRAVEL') gravel += l.thickness
+                    else if (l.type === 'SAND') sand += l.thickness
+                    else if (l.type === 'HUMUS') humus += l.thickness
+                    else if (l.type === 'PAVEMENT') pavement += l.thickness
+                })
+                
+                const topType = layers[layers.length - 1].type
+                const topTypeIdx = topType === 'ROCK' ? 0 : topType === 'GRAVEL' ? 1 : topType === 'SAND' ? 2 : topType === 'HUMUS' ? 3 : 4
+                
+                lData[texIdx] = rock
+                lData[texIdx + 1] = gravel
+                lData[texIdx + 2] = sand
+                lData[texIdx + 3] = humus
+                
+                const height = rock + gravel + sand + humus + pavement - 5.0 // -5 is TERRAIN_BASE_Y
+                sData[texIdx] = height
+                sData[texIdx + 1] = rLevel[rowOff + i]
+                sData[texIdx + 2] = topTypeIdx
+                sData[texIdx + 3] = pavement
             }
         }
-        this.terrainTexture.needsUpdate = true
+        this.terrainLayersTexture.needsUpdate = true
+        this.terrainSurfaceTexture.needsUpdate = true
     }
 
     public step(rain: number, seaLevel: number, time: number) {

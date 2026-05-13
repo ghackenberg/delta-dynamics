@@ -1,6 +1,7 @@
 export const waterFragmentShader = `
 uniform sampler2D uWater;
-uniform sampler2D uTerrain; // R: height, G: aCap, B: rLevel
+uniform sampler2D uTerrainLayers;  // R: rock, G: gravel, B: sand, A: humus
+uniform sampler2D uTerrainSurface; // R: pavement, G: rLevel, B: topType, A: height
 uniform float uRain;
 uniform float uSeaLevel;
 uniform float uTime;
@@ -11,13 +12,17 @@ void main() {
     vec2 texel = 1.0 / uResolution.xy;
 
     vec4 water = texture2D(uWater, uv);
-    vec4 terrain = texture2D(uTerrain, uv);
+    vec4 layers = texture2D(uTerrainLayers, uv);
+    vec4 surface = texture2D(uTerrainSurface, uv);
     
-    float th = terrain.r;
-    float ac = terrain.g;
-    float rl = terrain.b;
+    float th = surface.r; // pre-calculated total height for efficiency
+    float rl = surface.g;
     float sw = water.r;
     float gw = water.g;
+
+    // Calculate aCap based on layer thicknesses and porosities
+    // ROCK: 0.05, GRAVEL: 0.3, SAND: 0.35, HUMUS: 0.4, PAVEMENT: 0.02
+    float ac = layers.r * 0.05 + layers.g * 0.3 + layers.b * 0.35 + layers.a * 0.4 + surface.a * 0.02;
 
     float sL = th + sw;
     float gL = th - 0.5 + (ac > 0.0 ? (gw / ac) : 0.0);
@@ -37,9 +42,9 @@ void main() {
         if (nUv.x < 0.0 || nUv.x > 1.0 || nUv.y < 0.0 || nUv.y > 1.0) continue;
 
         vec4 nWater = texture2D(uWater, nUv);
-        vec4 nTerrain = texture2D(uTerrain, nUv);
+        vec4 nSurface = texture2D(uTerrainSurface, nUv);
         
-        float nSL = nTerrain.r + nWater.r;
+        float nSL = nSurface.r + nWater.r;
         float sDiff = sL - nSL;
         if (sDiff > 0.0001) {
             float f = sDiff * 0.05;
@@ -51,7 +56,11 @@ void main() {
             sDelta += clampedF;
         }
 
-        float nGL = nTerrain.r - 0.5 + (nTerrain.g > 0.0 ? (nWater.g / nTerrain.g) : 0.0);
+        // We also need nAC for nGL
+        vec4 nLayers = texture2D(uTerrainLayers, nUv);
+        float nAC = nLayers.r * 0.05 + nLayers.g * 0.3 + nLayers.b * 0.35 + nLayers.a * 0.4 + nSurface.a * 0.02;
+
+        float nGL = nSurface.r - 0.5 + (nAC > 0.0 ? (nWater.g / nAC) : 0.0);
         float gDiff = gL - nGL;
         if (gDiff > 0.0001) {
             float f = gDiff * 0.005;

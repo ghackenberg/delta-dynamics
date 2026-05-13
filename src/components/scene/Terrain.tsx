@@ -6,48 +6,18 @@ import { useStore } from '../../hooks/useStore'
 import { GRID_SIZE, TILE_SIZE, SEA_LEVEL } from '../../constants/gameConfig'
 import { WaterComputeSystem } from '../../systems/waterComputeSystem'
 
-const BICUBIC_GLSL = `
-  vec4 catmullRom(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float t) {
-      float t2 = t * t;
-      float t3 = t2 * t;
-      return 0.5 * (
-          (2.0 * p1) +
-          (-p0 + p2) * t +
-          (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 +
-          (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
-      );
-  }
-
-  vec4 bicubic(sampler2D tex, vec2 uv, vec2 res) {
+const BILINEAR_GLSL = `
+  vec4 bilinear(sampler2D tex, vec2 uv, vec2 res) {
       vec2 st = uv * res - 0.5;
       vec2 i = floor(st);
       vec2 f = fract(st);
 
-      vec4 p00 = texture2D(tex, (i + vec2(-1.0, -1.0) + 0.5) / res);
-      vec4 p10 = texture2D(tex, (i + vec2( 0.0, -1.0) + 0.5) / res);
-      vec4 p20 = texture2D(tex, (i + vec2( 1.0, -1.0) + 0.5) / res);
-      vec4 p30 = texture2D(tex, (i + vec2( 2.0, -1.0) + 0.5) / res);
-      vec4 row0 = catmullRom(p00, p10, p20, p30, f.x);
+      vec4 p00 = texture2D(tex, (i + vec2(0.0, 0.0) + 0.5) / res);
+      vec4 p10 = texture2D(tex, (i + vec2(1.0, 0.0) + 0.5) / res);
+      vec4 p01 = texture2D(tex, (i + vec2(0.0, 1.0) + 0.5) / res);
+      vec4 p11 = texture2D(tex, (i + vec2(1.0, 1.0) + 0.5) / res);
 
-      vec4 p01 = texture2D(tex, (i + vec2(-1.0,  0.0) + 0.5) / res);
-      vec4 p11 = texture2D(tex, (i + vec2( 0.0,  0.0) + 0.5) / res);
-      vec4 p21 = texture2D(tex, (i + vec2( 1.0,  0.0) + 0.5) / res);
-      vec4 p31 = texture2D(tex, (i + vec2( 2.0,  0.0) + 0.5) / res);
-      vec4 row1 = catmullRom(p01, p11, p21, p31, f.x);
-
-      vec4 p02 = texture2D(tex, (i + vec2(-1.0,  1.0) + 0.5) / res);
-      vec4 p12 = texture2D(tex, (i + vec2( 0.0,  1.0) + 0.5) / res);
-      vec4 p22 = texture2D(tex, (i + vec2( 1.0,  1.0) + 0.5) / res);
-      vec4 p32 = texture2D(tex, (i + vec2( 2.0,  1.0) + 0.5) / res);
-      vec4 row2 = catmullRom(p02, p12, p22, p32, f.x);
-
-      vec4 p03 = texture2D(tex, (i + vec2(-1.0,  2.0) + 0.5) / res);
-      vec4 p13 = texture2D(tex, (i + vec2( 0.0,  2.0) + 0.5) / res);
-      vec4 p23 = texture2D(tex, (i + vec2( 1.0,  2.0) + 0.5) / res);
-      vec4 p33 = texture2D(tex, (i + vec2( 2.0,  2.0) + 0.5) / res);
-      vec4 row3 = catmullRom(p03, p13, p23, p33, f.x);
-
-      return catmullRom(row0, row1, row2, row3, f.y);
+      return mix(mix(p00, p10, f.x), mix(p01, p11, f.x), f.y);
   }
 `;
 
@@ -57,7 +27,6 @@ export const Terrain = () => {
   const sWater = useStore((state) => state.sWater)
   const gWater = useStore((state) => state.gWater)
   const tHeight = useStore((state) => state.tHeight)
-  const aCap = useStore((state) => state.aCap)
   const rLevel = useStore((state) => state.rLevel)
   const rainIntensity = useStore((state) => state.rainIntensity)
   const day = useStore((state) => state.day)
@@ -74,13 +43,8 @@ export const Terrain = () => {
     gpuSim.setInitialWater(sWater, gWater)
   }, [gpuSim, sWater, gWater]) // Only on mount or if water changes
 
-  // Update terrain texture when vertices change
-  useEffect(() => {
-    gpuSim.updateTerrain(tHeight, aCap, rLevel)
-  }, [gpuSim, tHeight, aCap, rLevel])
-
   // Initialize stable objects once
-  const hTex = useMemo(() => {
+  const layerTex = useMemo(() => {
     const data = new Float32Array((GRID_SIZE + 1) * (GRID_SIZE + 1) * 4)
     const tex = new THREE.DataTexture(data, GRID_SIZE + 1, GRID_SIZE + 1, THREE.RGBAFormat, THREE.FloatType)
     tex.minFilter = THREE.NearestFilter
@@ -88,12 +52,64 @@ export const Terrain = () => {
     return tex
   }, [])
 
+  const surfaceTex = useMemo(() => {
+    const data = new Float32Array((GRID_SIZE + 1) * (GRID_SIZE + 1) * 4)
+    const tex = new THREE.DataTexture(data, GRID_SIZE + 1, GRID_SIZE + 1, THREE.RGBAFormat, THREE.FloatType)
+    tex.minFilter = THREE.NearestFilter
+    tex.magFilter = THREE.NearestFilter
+    return tex
+  }, [])
+
+  // Update terrain texture when vertices change
+  useEffect(() => {
+    gpuSim.updateTerrain(terrainVertices, rLevel)
+
+    // Also update rendering textures
+    const lData = layerTex.image.data as Float32Array
+    const sData = surfaceTex.image.data as Float32Array
+    const size = GRID_SIZE + 1
+    
+    for (let j = 0; j <= GRID_SIZE; j++) {
+      const rowOff = j * size
+      for (let i = 0; i <= GRID_SIZE; i++) {
+        const texIdx = (rowOff + i) * 4
+        const layers = terrainVertices[i][j]
+        
+        let rock = 0, gravel = 0, sand = 0, humus = 0, pavement = 0
+        layers.forEach(l => {
+          if (l.type === 'ROCK') rock += l.thickness
+          else if (l.type === 'GRAVEL') gravel += l.thickness
+          else if (l.type === 'SAND') sand += l.thickness
+          else if (l.type === 'HUMUS') humus += l.thickness
+          else if (l.type === 'PAVEMENT') pavement += l.thickness
+        })
+        
+        const topType = layers[layers.length - 1].type
+        const topTypeIdx = topType === 'ROCK' ? 0 : topType === 'GRAVEL' ? 1 : topType === 'SAND' ? 2 : topType === 'HUMUS' ? 3 : 4
+        const height = rock + gravel + sand + humus + pavement - 5.0 // -5 is TERRAIN_BASE_Y
+        
+        lData[texIdx] = rock
+        lData[texIdx + 1] = gravel
+        lData[texIdx + 2] = sand
+        lData[texIdx + 3] = humus
+        
+        sData[texIdx] = height
+        sData[texIdx + 1] = rLevel[j * GRID_SIZE + i] || -99 // Use grid rLevel for vertex
+        sData[texIdx + 2] = topTypeIdx
+        sData[texIdx + 3] = pavement
+      }
+    }
+    layerTex.needsUpdate = true
+    surfaceTex.needsUpdate = true
+  }, [gpuSim, terrainVertices, rLevel, layerTex, surfaceTex])
+
   const uniforms = useMemo(() => ({
-    heightMap: { value: hTex },
+    uTerrainLayers: { value: layerTex },
+    uTerrainSurface: { value: surfaceTex },
     waterMap: { value: null as THREE.Texture | null },
     uTime: { value: 0 },
     uTileSize: { value: TILE_SIZE }
-  }), [hTex])
+  }), [layerTex, surfaceTex])
 
   const staticGeometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(GRID_SIZE * TILE_SIZE, GRID_SIZE * TILE_SIZE, GRID_SIZE, GRID_SIZE)
@@ -102,65 +118,79 @@ export const Terrain = () => {
   }, [])
 
   const onBeforeCompileTerrain = (shader: THREE.ShaderLibShader) => {
-    shader.uniforms.heightMap = uniforms.heightMap
+    shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
+    shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.uniforms.uTileSize = uniforms.uTileSize
     
     shader.vertexShader = shader.vertexShader.replace(
       '#include <common>',
       `#include <common>
-      uniform sampler2D heightMap;
+      uniform sampler2D uTerrainLayers;
+      uniform sampler2D uTerrainSurface;
       uniform float uTileSize;
       varying float vType;
       varying vec2 vGridUv;
-      ${BICUBIC_GLSL}`
-    ).replace(
-      '#include <beginnormal_vertex>',
-      `#include <beginnormal_vertex>
-      float texelSize = 1.0 / 101.0;
-      float hL = bicubic(heightMap, uv - vec2(texelSize, 0.0), vec2(101.0)).r;
-      float hR = bicubic(heightMap, uv + vec2(texelSize, 0.0), vec2(101.0)).r;
-      float hD = bicubic(heightMap, uv - vec2(0.0, texelSize), vec2(101.0)).r;
-      float hU = bicubic(heightMap, uv + vec2(0.0, texelSize), vec2(101.0)).r;
-      vec3 slopeX = vec3(2.0 * uTileSize, hR - hL, 0.0);
-      vec3 slopeZ = vec3(0.0, hU - hD, 2.0 * uTileSize);
-      objectNormal = normalize(cross(slopeZ, slopeX));`
+      ${BILINEAR_GLSL}`
     ).replace(
       '#include <begin_vertex>',
       `#include <begin_vertex>
       vGridUv = uv;
-      vec4 heightData = bicubic(heightMap, uv, vec2(101.0));
-      transformed.y = heightData.r;
-      vType = heightData.g;`
+      vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
+      vec4 surfaceData = bilinear(uTerrainSurface, sUv, vec2(101.0));
+      transformed.y = surfaceData.r;
+      vType = surfaceData.b;`
     )
 
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <common>',
       `#include <common>
+      uniform sampler2D uTerrainSurface;
       varying float vType;
       varying vec2 vGridUv;`
     ).replace(
       '#include <color_fragment>',
       `#include <color_fragment>
-      vec3 cHumus = vec3(0.12, 0.22, 0.12);
-      vec3 cSand = vec3(0.35, 0.3, 0.2);
       vec3 cRock = vec3(0.15, 0.15, 0.15);
+      vec3 cGravel = vec3(0.25, 0.22, 0.2);
+      vec3 cSand = vec3(0.35, 0.3, 0.2);
+      vec3 cHumus = vec3(0.12, 0.22, 0.12);
       vec3 cPavement = vec3(0.25, 0.25, 0.25);
-      vec3 terrainColor = cHumus;
-      terrainColor = mix(terrainColor, cSand, smoothstep(0.0, 1.0, vType));
-      terrainColor = mix(terrainColor, cRock, smoothstep(1.0, 2.0, vType));
-      terrainColor = mix(terrainColor, cPavement, smoothstep(2.0, 3.0, vType));
       
-      // Layer Boundary Contours
-      float distToBorder = abs(fract(vType) - 0.5);
-      float borderLine = 1.0 - smoothstep(0.0, 0.05, distToBorder);
-      // Only show borders between defined layers (avoid borders outside 0-3 range)
-      if (vType > 0.1 && vType < 2.9) {
-          terrainColor = mix(terrainColor, vec3(1.0, 0.9, 0.5), borderLine * 0.5);
-      }
-
+      // Discrete Cell-based Material Sampling
+      vec2 gridRes = vec2(100.0);
+      vec2 texRes = vec2(101.0);
+      vec2 cellCoord = floor(vGridUv * gridRes);
+      float cellType = texture2D(uTerrainSurface, (cellCoord + 0.5) / texRes).b;
+      
+      vec3 terrainColor = cRock;
+      if (cellType < 0.5) terrainColor = cRock;
+      else if (cellType < 1.5) terrainColor = cGravel;
+      else if (cellType < 2.5) terrainColor = cSand;
+      else if (cellType < 3.5) terrainColor = cHumus;
+      else terrainColor = cPavement;
+      
+      // Grid and Boundary lines
       vec2 grid = fract(vGridUv * 100.0);
-      if (grid.x < 0.05 || grid.y < 0.05) {
-          terrainColor *= 0.5;
+      float edgeDist = 0.05;
+      bool isGridLineX = grid.x < edgeDist || grid.x > 1.0 - edgeDist;
+      bool isGridLineY = grid.y < edgeDist || grid.y > 1.0 - edgeDist;
+      
+      if (isGridLineX || isGridLineY) {
+          float boundary = 0.0;
+          if (isGridLineX) {
+              float neighborType = texture2D(uTerrainSurface, (cellCoord + vec2(grid.x < 0.5 ? -0.5 : 1.5, 0.5)) / texRes).b;
+              if (abs(neighborType - cellType) > 0.1) boundary = 1.0;
+          }
+          if (isGridLineY) {
+              float neighborType = texture2D(uTerrainSurface, (cellCoord + vec2(0.5, grid.y < 0.5 ? -0.5 : 1.5)) / texRes).b;
+              if (abs(neighborType - cellType) > 0.1) boundary = 1.0;
+          }
+          
+          if (boundary > 0.5) {
+              terrainColor = mix(terrainColor, vec3(1.0, 0.9, 0.5), 0.6);
+          } else {
+              terrainColor *= 0.8;
+          }
       }
       
       diffuseColor.rgb = terrainColor;`
@@ -170,41 +200,43 @@ export const Terrain = () => {
   const terrainDepthMaterial = useMemo(() => {
     const mat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
     mat.onBeforeCompile = (shader) => {
-      shader.uniforms.heightMap = uniforms.heightMap
+      shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
       shader.vertexShader = shader.vertexShader.replace(
         '#include <common>',
         `#include <common>
-        uniform sampler2D heightMap;
-        ${BICUBIC_GLSL}`
+        uniform sampler2D uTerrainSurface;
+        ${BILINEAR_GLSL}`
       ).replace(
         '#include <begin_vertex>',
         `#include <begin_vertex>
-        transformed.y = bicubic(heightMap, uv, vec2(101.0)).r;`
+        vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
+        transformed.y = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;`
       )
     }
     return mat
-  }, [uniforms.heightMap])
+  }, [uniforms.uTerrainSurface])
 
   const onBeforeCompileWater = (shader: THREE.ShaderLibShader) => {
-    shader.uniforms.heightMap = uniforms.heightMap
+    shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.uniforms.waterMap = uniforms.waterMap
     shader.uniforms.uTime = uniforms.uTime
     
     shader.vertexShader = shader.vertexShader.replace(
       '#include <common>',
       `#include <common>
-      uniform sampler2D heightMap;
+      uniform sampler2D uTerrainSurface;
       uniform sampler2D waterMap;
       uniform float uTime;
       varying float vDepth;
       varying vec2 vGridUv;
-      ${BICUBIC_GLSL}`
+      ${BILINEAR_GLSL}`
     ).replace(
       '#include <begin_vertex>',
       `#include <begin_vertex>
       vGridUv = uv;
-      float h = bicubic(heightMap, uv, vec2(101.0)).r;
-      float sw = bicubic(waterMap, uv, vec2(100.0)).r;
+      vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
+      float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
+      float sw = bilinear(waterMap, uv, vec2(100.0)).r;
       transformed.y = h + sw;
       if (sw > 0.05) {
         transformed.y += sin(uTime * 2.0 + (position.x + position.z) * 5.0) * 0.005;
@@ -235,7 +267,7 @@ export const Terrain = () => {
       }
       
       diffuseColor.rgb = waterColor;
-      diffuseColor.a = smoothstep(0.015, 0.025, vDepth) * 0.8;`
+      diffuseColor.a = 1.0;`
     )
   }
 
@@ -249,27 +281,11 @@ export const Terrain = () => {
     // 2. Read back to CPU for entity logic
     gpuSim.readBack(sWater, gWater)
 
-    // 3. Update Height Texture (Static-ish)
-    const hData = hTex.image.data as Float32Array
-    const size = GRID_SIZE + 1
-    for (let j = 0; j <= GRID_SIZE; j++) {
-      const rowOff = j * size
-      for (let i = 0; i <= GRID_SIZE; i++) {
-        const idx = (rowOff + i) * 4
-        const layers = terrainVertices[i][j]
-        const topType = layers[layers.length - 1].type
-        const groundH = layers.reduce((sum, l) => sum + l.thickness, -5)
-        hData[idx] = groundH
-        hData[idx + 1] = topType === 'HUMUS' ? 0 : topType === 'SAND' ? 1 : topType === 'PAVEMENT' ? 3 : 2
-      }
-    }
-    hTex.needsUpdate = true
-
-    // 4. Update Uniforms
+    // 3. Update Uniforms
     uniforms.waterMap.value = gpuSim.getWaterTexture()
     uniforms.uTime.value = state.clock.getElapsedTime()
     
-    useStore.setState({ heightTexture: hTex, waterTexture: gpuSim.getWaterTexture() as THREE.DataTexture })
+    useStore.setState({ heightTexture: surfaceTex, waterTexture: gpuSim.getWaterTexture() as THREE.DataTexture })
   })
 
   const getGridCoords = (point: THREE.Vector3) => {
@@ -294,7 +310,7 @@ export const Terrain = () => {
         geometry={staticGeometry}
         customDepthMaterial={terrainDepthMaterial}
       >
-        <meshStandardMaterial onBeforeCompile={onBeforeCompileTerrain} />
+        <meshStandardMaterial flatShading onBeforeCompile={onBeforeCompileTerrain} />
       </mesh>
       
       <mesh 
@@ -303,7 +319,7 @@ export const Terrain = () => {
         position={[0, 0.001, 0]} 
         geometry={staticGeometry}
       >
-        <meshStandardMaterial transparent onBeforeCompile={onBeforeCompileWater} />
+        <meshStandardMaterial flatShading onBeforeCompile={onBeforeCompileWater} />
       </mesh>
 
       {hoveredCell && (
