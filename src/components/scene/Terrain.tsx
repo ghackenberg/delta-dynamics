@@ -93,8 +93,12 @@ export const Terrain = () => {
         lData[texIdx + 2] = sand
         lData[texIdx + 3] = humus
         
+        const gridI = Math.min(i, GRID_SIZE - 1)
+        const gridJ = Math.min(j, GRID_SIZE - 1)
+        const gridIdx = gridJ * GRID_SIZE + gridI
+        
         sData[texIdx] = height
-        sData[texIdx + 1] = rLevel[j * GRID_SIZE + i] || -99 // Use grid rLevel for vertex
+        sData[texIdx + 1] = rLevel[gridIdx] || -99
         sData[texIdx + 2] = topTypeIdx
         sData[texIdx + 3] = pavement
       }
@@ -159,7 +163,7 @@ export const Terrain = () => {
       // Discrete Cell-based Material Sampling
       vec2 gridRes = vec2(100.0);
       vec2 texRes = vec2(101.0);
-      vec2 cellCoord = floor(vGridUv * gridRes);
+      vec2 cellCoord = clamp(floor(vGridUv * gridRes), 0.0, 99.0);
       float cellType = texture2D(uTerrainSurface, (cellCoord + 0.5) / texRes).b;
       
       vec3 terrainColor = cRock;
@@ -215,6 +219,104 @@ export const Terrain = () => {
     }
     return mat
   }, [uniforms.uTerrainSurface])
+
+  const sideGeometry = useMemo(() => {
+    const geo = new THREE.PlaneGeometry(GRID_SIZE * TILE_SIZE, 1, GRID_SIZE, 1)
+    geo.translate(0, 0.5, 0) // Shift so bottom is at 0
+    return geo
+  }, [])
+
+  const onBeforeCompileSide = (shader: THREE.ShaderLibShader, edge: 'N' | 'S' | 'E' | 'W', isWater: boolean = false) => {
+    shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
+    shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+    shader.uniforms.waterMap = uniforms.waterMap
+    shader.uniforms.uTime = uniforms.uTime
+    
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <common>',
+      `#include <common>
+      uniform sampler2D uTerrainLayers;
+      uniform sampler2D uTerrainSurface;
+      uniform sampler2D waterMap;
+      uniform float uTime;
+      varying float vWorldY;
+      varying float vSurfaceY;
+      varying float vWaterY;
+      varying vec2 vGridUv;
+      ${BILINEAR_GLSL}`
+    ).replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+      float edgeX = uv.x;
+      ${edge === 'N' ? 'vGridUv = vec2(1.0 - edgeX, 1.0);' : ''}
+      ${edge === 'S' ? 'vGridUv = vec2(edgeX, 0.0);' : ''}
+      ${edge === 'W' ? 'vGridUv = vec2(0.0, 1.0 - edgeX);' : ''}
+      ${edge === 'E' ? 'vGridUv = vec2(1.0, edgeX);' : ''}
+
+      vec2 sUv = (vGridUv * 100.0 + 0.5) / 101.0;
+      float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
+      float sw = bilinear(waterMap, vGridUv, vec2(100.0)).r;
+      
+      vSurfaceY = h;
+      vWaterY = h + sw;
+
+      if (uv.y > 0.5) {
+        transformed.y = ${isWater ? 'vWaterY' : 'vSurfaceY'};
+      } else {
+        transformed.y = ${isWater ? 'vSurfaceY' : '-5.0'};
+      }
+      vWorldY = transformed.y;`
+    )
+
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <common>',
+      `#include <common>
+      uniform sampler2D uTerrainLayers;
+      uniform sampler2D uTerrainSurface;
+      uniform sampler2D waterMap;
+      varying float vWorldY;
+      varying float vSurfaceY;
+      varying float vWaterY;
+      varying vec2 vGridUv;
+      ${BILINEAR_GLSL}`
+    ).replace(
+      '#include <color_fragment>',
+      `#include <color_fragment>
+      ${isWater ? `
+        if (vWaterY - vSurfaceY < 0.01) discard;
+        vec3 shallowColor = vec3(0.2, 0.5, 0.8);
+        vec3 deepColor = vec3(0.02, 0.1, 0.3);
+        diffuseColor.rgb = mix(shallowColor, deepColor, 0.5);
+      ` : `
+        vec3 cRock = vec3(0.15, 0.15, 0.15);
+        vec3 cGravel = vec3(0.25, 0.22, 0.2);
+        vec3 cSand = vec3(0.35, 0.3, 0.2);
+        vec3 cHumus = vec3(0.12, 0.22, 0.12);
+        vec3 cPavement = vec3(0.25, 0.25, 0.25);
+
+        vec2 sUv = (vGridUv * 100.0 + 0.5) / 101.0;
+        
+        // Smoothly interpolated layer thicknesses
+        vec4 layers = bilinear(uTerrainLayers, sUv, vec2(101.0));
+        
+        // Discrete material type matching the surface cells
+        vec2 cellCoord = floor(vGridUv * 100.0);
+        float cellType = texture2D(uTerrainSurface, (cellCoord + 0.5) / 101.0).b;
+
+        float h = -5.0;
+        vec3 terrainColor = cRock;
+
+        if (vWorldY > h + layers.r + layers.g + layers.b + layers.a) terrainColor = cPavement;
+        else if (vWorldY > h + layers.r + layers.g + layers.b) terrainColor = cHumus;
+        else if (vWorldY > h + layers.r + layers.g) terrainColor = cSand;
+        else if (vWorldY > h + layers.r) terrainColor = cGravel;
+        else terrainColor = cRock;
+
+        diffuseColor.rgb = terrainColor * 0.7; // Darken sides
+      `}
+      diffuseColor.a = 1.0;`
+    )
+  }
 
   const onBeforeCompileWater = (shader: THREE.ShaderLibShader) => {
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
@@ -320,6 +422,34 @@ export const Terrain = () => {
         geometry={staticGeometry}
       >
         <meshStandardMaterial flatShading onBeforeCompile={onBeforeCompileWater} />
+      </mesh>
+
+      {/* Terrain Sides */}
+      <mesh position={[0, 0, -offset]} rotation={[0, Math.PI, 0]} geometry={sideGeometry} frustumCulled={false}>
+        <meshStandardMaterial side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'N')} />
+      </mesh>
+      <mesh position={[0, 0, offset]} rotation={[0, 0, 0]} geometry={sideGeometry} frustumCulled={false}>
+        <meshStandardMaterial side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'S')} />
+      </mesh>
+      <mesh position={[-offset, 0, 0]} rotation={[0, -Math.PI/2, 0]} geometry={sideGeometry} frustumCulled={false}>
+        <meshStandardMaterial side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'W')} />
+      </mesh>
+      <mesh position={[offset, 0, 0]} rotation={[0, Math.PI/2, 0]} geometry={sideGeometry} frustumCulled={false}>
+        <meshStandardMaterial side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'E')} />
+      </mesh>
+
+      {/* Water Sides */}
+      <mesh position={[0, 0, -offset]} rotation={[0, Math.PI, 0]} geometry={sideGeometry} frustumCulled={false}>
+        <meshStandardMaterial transparent side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'N', true)} />
+      </mesh>
+      <mesh position={[0, 0, offset]} rotation={[0, 0, 0]} geometry={sideGeometry} frustumCulled={false}>
+        <meshStandardMaterial transparent side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'S', true)} />
+      </mesh>
+      <mesh position={[-offset, 0, 0]} rotation={[0, -Math.PI/2, 0]} geometry={sideGeometry} frustumCulled={false}>
+        <meshStandardMaterial transparent side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'W', true)} />
+      </mesh>
+      <mesh position={[offset, 0, 0]} rotation={[0, Math.PI/2, 0]} geometry={sideGeometry} frustumCulled={false}>
+        <meshStandardMaterial transparent side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'E', true)} />
       </mesh>
 
       {hoveredCell && (
