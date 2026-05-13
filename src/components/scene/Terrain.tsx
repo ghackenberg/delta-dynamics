@@ -226,8 +226,8 @@ export const Terrain = () => {
       vec3 waterColor = mix(shallowColor, deepColor, smoothstep(0.0, 0.5, vDepth));
       
       // Crisp shoreline contour near the discard threshold
-      float shoreLine = 1.0 - smoothstep(0.02, 0.035, vDepth);
-      waterColor = mix(waterColor, vec3(1.0), shoreLine * 0.8);
+      float shoreLine = 1.0 - smoothstep(0.02, 0.028, vDepth);
+      waterColor = mix(waterColor, vec3(1.0), shoreLine * 0.9);
       
       vec2 grid = fract(vGridUv * 100.0);
       if (grid.x < 0.05 || grid.y < 0.05) {
@@ -235,7 +235,7 @@ export const Terrain = () => {
       }
       
       diffuseColor.rgb = waterColor;
-      diffuseColor.a = smoothstep(0.0, 0.1, vDepth) * 0.7;`
+      diffuseColor.a = smoothstep(0.015, 0.025, vDepth) * 0.8;`
     )
   }
 
