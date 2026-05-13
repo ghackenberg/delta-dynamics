@@ -1,5 +1,5 @@
 import { GRID_SIZE, SEA_LEVEL, MATERIAL_PROPERTIES } from '../constants/gameConfig'
-import type { GameState, BuildingInstance, TerrainVertex } from '../types/game'
+import type { GameState, TerrainVertex } from '../types/game'
 import { getVertexTotalHeight } from '../utils/gameUtils'
 
 export const runWaterSimulationInPlace = (state: GameState) => {

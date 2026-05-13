@@ -1,7 +1,7 @@
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useStore } from '../../store/useStore'
+import { useStore } from '../../hooks/useStore'
 import { GRID_SIZE, TILE_SIZE, OFFSET } from '../../constants/gameConfig'
 
 const MAX_ANIMALS = 500

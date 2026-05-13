@@ -1,7 +1,7 @@
 import { MapControls, ContactShadows, Environment } from '@react-three/drei'
 import { GameGrid } from './GameGrid'
 import { Terrain } from './Terrain'
-import { useStore } from '../../store/useStore'
+import { useStore } from '../../hooks/useStore'
 import { useMemo } from 'react'
 
 export const Scene = () => {

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useStore } from '../../store/useStore'
+import { useStore } from '../../hooks/useStore'
 import { BUILDING_SIZES, BUILDING_COLORS, GRID_SIZE, TILE_SIZE, OFFSET } from '../../constants/gameConfig'
 import { Human } from '../entities/Human'
 import { InstancedTrees } from './InstancedTrees'

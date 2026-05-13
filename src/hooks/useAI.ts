@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CreateMLCEngine, MLCEngine, type ChatCompletionMessageParam } from '@mlc-ai/web-llm'
-import { useStore } from '../store/useStore'
+import { useStore } from './useStore'
 
 export const useAI = () => {
   const [engine, setEngine] = useState<MLCEngine | null>(null)

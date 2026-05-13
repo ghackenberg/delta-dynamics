@@ -1,4 +1,4 @@
-import type { BuildingInstance, BuildingType, GameResources, Human, TerrainVertex, GameState } from '../types/game'
+import type { BuildingInstance, BuildingType, GameResources, Human, TerrainVertex, GameState, LayerType } from '../types/game'
 import { BUILDING_COSTS, GRID_SIZE } from '../constants/gameConfig'
 import { updateCellWaterData } from './waterSystem'
 

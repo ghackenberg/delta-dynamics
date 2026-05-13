@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useStore } from '../store/useStore'
+import { useStore } from './useStore'
 
 export const useGameLogic = () => {
   const tick = useStore((state) => state.tick)

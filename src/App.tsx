@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { Scene } from './components/scene/Scene'
 import { HUD } from './components/ui/HUD'
-import { useAI } from './ai/useAI'
+import { useAI } from './hooks/useAI'
 import { useGameLogic } from './hooks/useGameLogic'
 import { Stats } from '@react-three/drei'
 import * as THREE from 'three'

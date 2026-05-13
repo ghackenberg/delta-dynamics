@@ -1,4 +1,4 @@
-import { useStore } from '../../store/useStore'
+import { useStore } from '../../hooks/useStore'
 import type { BuildingType } from '../../types/game'
 
 export const HUD = ({ onInitAI, onConsultAI }: { onInitAI: () => void, onConsultAI: () => void }) => {

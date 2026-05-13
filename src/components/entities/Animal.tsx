@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import * as THREE from 'three'
-import { useStore } from '../../store/useStore'
+import { useStore } from '../../hooks/useStore'
 import type { AnimalType } from '../../types/game'
 
 

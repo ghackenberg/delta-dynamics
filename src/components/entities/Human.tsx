@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { Html } from '@react-three/drei'
 
 import * as THREE from 'three'
-import { useStore } from '../../store/useStore'
+import { useStore } from '../../hooks/useStore'
 
 interface HumanProps {
   position: [number, number]

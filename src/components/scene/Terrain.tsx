@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/immutability */
 import { useMemo, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useStore } from '../../store/useStore'
+import { useStore } from '../../hooks/useStore'
 import { GRID_SIZE, TILE_SIZE, SEA_LEVEL } from '../../constants/gameConfig'
 import { WaterComputeSystem } from '../../systems/waterComputeSystem'
 
@@ -26,28 +27,28 @@ export const Terrain = () => {
 
   useEffect(() => {
     gpuSim.setInitialWater(sWater, gWater)
-  }, []) // Only on mount
+  }, [gpuSim, sWater, gWater]) // Only on mount or if water changes
 
   // Update terrain texture when vertices change
   useEffect(() => {
     gpuSim.updateTerrain(tHeight, aCap, rLevel)
-  }, [tHeight, aCap, rLevel])
+  }, [gpuSim, tHeight, aCap, rLevel])
 
-  // Use useState initializer for stable objects that don't need re-render triggers
-  const [hTex] = useState(() => {
+  // Initialize stable objects once
+  const hTex = useMemo(() => {
     const data = new Float32Array((GRID_SIZE + 1) * (GRID_SIZE + 1) * 4)
     const tex = new THREE.DataTexture(data, GRID_SIZE + 1, GRID_SIZE + 1, THREE.RGBAFormat, THREE.FloatType)
     tex.minFilter = THREE.NearestFilter
     tex.magFilter = THREE.NearestFilter
     return tex
-  })
+  }, [])
 
-  const [uniforms] = useState(() => ({
+  const uniforms = useMemo(() => ({
     heightMap: { value: hTex },
     waterMap: { value: null as THREE.Texture | null },
     uTime: { value: 0 },
     uTileSize: { value: TILE_SIZE }
-  }))
+  }), [hTex])
 
   const staticGeometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(GRID_SIZE * TILE_SIZE, GRID_SIZE * TILE_SIZE, GRID_SIZE, GRID_SIZE)
