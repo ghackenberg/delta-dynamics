@@ -1,8 +1,10 @@
+/* eslint-disable react-hooks/immutability */
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
 import { GRID_SIZE, TILE_SIZE, OFFSET } from '../../constants/gameConfig'
+import { PICKING_LAYER } from '../scene/PickingSystem'
 
 const MAX_ANIMALS = 500
 
@@ -48,6 +50,40 @@ const animalVertexShader = (shader: THREE.ShaderLibShader, heightMap: THREE.Text
   )
 }
 
+const pickingVertexShader = (shader: THREE.ShaderLibShader, heightMap: THREE.Texture) => {
+  shader.uniforms.heightMap = { value: heightMap }
+  shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
+  shader.uniforms.uOffset = { value: OFFSET }
+
+  shader.vertexShader = shader.vertexShader.replace(
+    '#include <common>',
+    `#include <common>
+    uniform sampler2D heightMap;
+    uniform float uGridSize;
+    uniform float uOffset;
+    attribute float aPickingId;
+    varying float vPickingId;`
+  ).replace(
+    '#include <begin_vertex>',
+    `#include <begin_vertex>
+    vPickingId = aPickingId;
+    vec4 instPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    vec2 worldUv = (instPos.xz + uOffset) / uGridSize;
+    float h = texture2D(heightMap, worldUv).r;
+    transformed.y += h;`
+  )
+  
+  shader.fragmentShader = `
+    varying float vPickingId;
+    void main() {
+      float id = vPickingId + 1.0; // Offset by 1
+      float r = floor(id / 256.0) / 255.0;
+      float g = mod(id, 256.0) / 255.0;
+      gl_FragColor = vec4(r, g, 253.0 / 255.0, 1.0); // b=253 for animals
+    }
+  `
+}
+
 // Generate static random values to avoid Math.random during render
 const STATIC_RANDOM_VALUES = new Float32Array(MAX_ANIMALS)
 for (let i = 0; i < MAX_ANIMALS; i++) {
@@ -62,6 +98,9 @@ export const InstancedAnimals = () => {
   const deerRef = useRef<THREE.InstancedMesh>(null)
   const wolfRef = useRef<THREE.InstancedMesh>(null)
   
+  const deerPickingRef = useRef<THREE.InstancedMesh>(null)
+  const wolfPickingRef = useRef<THREE.InstancedMesh>(null)
+
   // Use useState initializer for a stable uniform object
   const [uTime] = useState(() => ({ value: 0 }))
 
@@ -76,26 +115,48 @@ export const InstancedAnimals = () => {
     return new THREE.InstancedBufferAttribute(STATIC_RANDOM_VALUES, 1)
   }, [])
 
+  const animalGeo = useMemo(() => {
+    const geo = new THREE.BoxGeometry(0.5, 0.5, 1.0)
+    geo.translate(0, 0.25, 0)
+    geo.setAttribute('aRandom', randomAttr)
+    geo.setAttribute('aPickingId', new THREE.InstancedBufferAttribute(new Float32Array(MAX_ANIMALS), 1))
+    return geo
+  }, [randomAttr])
+
   useEffect(() => {
     const dummy = new THREE.Object3D()
-    const updateMesh = (ref: React.RefObject<THREE.InstancedMesh | null>, list: typeof animals) => {
-      if (!ref.current) return
+    const updateMesh = (ref: React.RefObject<THREE.InstancedMesh | null>, pickingRef: React.RefObject<THREE.InstancedMesh | null>, list: typeof animals) => {
+      if (!ref.current || !pickingRef.current) return
+      
+      const pickingAttr = ref.current.geometry.getAttribute('aPickingId') as THREE.InstancedBufferAttribute
+      const pickingArray = pickingAttr.array as Float32Array
+      
+      pickingArray.fill(0)
+      
       list.forEach((animal, i) => {
         dummy.position.set(animal.position[0], 0, animal.position[1])
         dummy.rotation.y = animal.rotation
         dummy.scale.setScalar(animal.type === 'WOLF' ? 0.15 : 0.2)
         dummy.updateMatrix()
+        
         ref.current!.setMatrixAt(i, dummy.matrix)
+        pickingRef.current!.setMatrixAt(i, dummy.matrix)
+        pickingArray[i] = animal.pickingId || 0
       })
+      
       ref.current.count = list.length
       ref.current.instanceMatrix.needsUpdate = true
+      
+      pickingRef.current.count = list.length
+      pickingRef.current.instanceMatrix.needsUpdate = true
+      
+      pickingAttr.needsUpdate = true
     }
-    updateMesh(deerRef, animalTypes.DEER)
-    updateMesh(wolfRef, animalTypes.WOLF)
+    updateMesh(deerRef, deerPickingRef, animalTypes.DEER)
+    updateMesh(wolfRef, wolfPickingRef, animalTypes.WOLF)
   }, [animalTypes, animals])
 
   useFrame((state) => {
-    // eslint-disable-next-line react-hooks/immutability
     uTime.value = state.clock.getElapsedTime()
   })
 
@@ -107,15 +168,12 @@ export const InstancedAnimals = () => {
     }
     const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
     depth.onBeforeCompile = (shader) => animalVertexShader(shader, heightTexture, uTime)
-    return { deer: createMat('#8d5524'), wolf: createMat('#444444'), depth }
+    
+    const picking = new THREE.MeshBasicMaterial()
+    picking.onBeforeCompile = (shader) => pickingVertexShader(shader, heightTexture)
+    
+    return { deer: createMat('#8d5524'), wolf: createMat('#444444'), depth, picking }
   }, [heightTexture, uTime])
-
-  const animalGeo = useMemo(() => {
-    const geo = new THREE.BoxGeometry(0.5, 0.5, 1.0)
-    geo.translate(0, 0.25, 0)
-    geo.setAttribute('aRandom', randomAttr)
-    return geo
-  }, [randomAttr])
 
   return (
     <group>
@@ -124,6 +182,14 @@ export const InstancedAnimals = () => {
       </instancedMesh>
       <instancedMesh ref={wolfRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={mats.depth}>
         <primitive object={mats.wolf} attach="material" />
+      </instancedMesh>
+
+      {/* Picking Meshes */}
+      <instancedMesh ref={deerPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={1 << PICKING_LAYER}>
+        <primitive object={mats.picking} attach="material" />
+      </instancedMesh>
+      <instancedMesh ref={wolfPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={1 << PICKING_LAYER}>
+        <primitive object={mats.picking} attach="material" />
       </instancedMesh>
     </group>
   )

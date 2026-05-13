@@ -23,7 +23,7 @@ const { vertices: initialVertices, sWater: initialSWater, gWater: initialGWater,
 
 TerrainManager.getInstance().initialize(initialVertices)
 
-const initialHumans = [{ id: 'starter', name: 'Leader', position: findSafeLandPosition(initialSWater), rotation: 0, target: null, state: 'IDLE' as const, homeId: null, workplaceId: null, color: getRandomSkinTone(), outfitColor: getRandomOutfitColor() }]
+const initialHumans = [{ id: 'starter', pickingId: 1, name: 'Leader', position: findSafeLandPosition(initialSWater), rotation: 0, target: null, state: 'IDLE' as const, homeId: null, workplaceId: null, color: getRandomSkinTone(), outfitColor: getRandomOutfitColor() }]
 const initialAnimals: Animal[] = []
 const animalConfigs: {type: AnimalType, pos: [number, number]}[] = [
   { type: 'DEER', pos: [2, 2] }, { type: 'DEER', pos: [5, -3] }, { type: 'DEER', pos: [-4, 6] }, { type: 'WOLF', pos: [-2, -2] }, { type: 'WOLF', pos: [-7, -5] },
@@ -33,7 +33,7 @@ animalConfigs.forEach((config, idx) => {
   const gridZ = Math.floor((config.pos[1] + BOUNDARY) / TILE_SIZE)
   let finalPos = config.pos
   if (gridX >= 0 && gridX < GRID_SIZE && gridZ >= 0 && gridZ < GRID_SIZE && initialSWater[gridZ * GRID_SIZE + gridX] > 0.05) finalPos = findSafeLandPosition(initialSWater)
-  initialAnimals.push({ id: `${config.type.toLowerCase()}${idx + 1}`, type: config.type, position: finalPos, rotation: 0, target: null, state: 'IDLE' as const, waitCounter: 0 })
+  initialAnimals.push({ id: `${config.type.toLowerCase()}${idx + 1}`, pickingId: idx + 1, type: config.type, position: finalPos, rotation: 0, target: null, state: 'IDLE' as const, waitCounter: 0 })
 })
 
 export const useStore = create<GameState>((set, get) => ({
@@ -93,11 +93,13 @@ export const useStore = create<GameState>((set, get) => ({
     const home = state.buildings.find(b => b.id === homeId)
     if (!home) return state
     const [wx, wz] = gridToWorld(home.x, home.z, home.width, home.height)
-    return { humans: [...state.humans, { id: Math.random().toString(36).substr(2, 9), name: `Villager ${state.humans.length + 1}`, position: [wx, wz], rotation: 0, target: null, state: 'IDLE' as const, homeId, workplaceId: null, color: getRandomSkinTone(), outfitColor: getRandomOutfitColor() }] }
+    const maxPickingId = state.humans.reduce((max, h) => Math.max(max, h.pickingId || 0), 0)
+    return { humans: [...state.humans, { id: Math.random().toString(36).substr(2, 9), pickingId: maxPickingId + 1, name: `Villager ${state.humans.length + 1}`, position: [wx, wz], rotation: 0, target: null, state: 'IDLE' as const, homeId, workplaceId: null, color: getRandomSkinTone(), outfitColor: getRandomOutfitColor() }] }
   }),
   spawnAnimal: (type, x, z) => set((state) => {
     const pos: [number, number] = (x !== undefined && z !== undefined) ? [x, z] : findSafeLandPosition(state.sWater)
-    return { animals: [...state.animals, { id: Math.random().toString(36).substr(2, 9), type, position: pos, rotation: 0, target: null, state: 'IDLE' as const, waitCounter: 0 }] }
+    const maxPickingId = state.animals.reduce((max, a) => Math.max(max, a.pickingId || 0), 0)
+    return { animals: [...state.animals, { id: Math.random().toString(36).substr(2, 9), pickingId: maxPickingId + 1, type, position: pos, rotation: 0, target: null, state: 'IDLE' as const, waitCounter: 0 }] }
   }),
   placeBuilding: (xIndex, zIndex, type) => set((state) => {
     const size = BUILDING_SIZES[type] || { width: 1, height: 1 }
@@ -122,7 +124,8 @@ export const useStore = create<GameState>((set, get) => ({
     let actualType: BuildingType = type
     if (type === 'TREE') actualType = (['TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'] as const)[Math.floor(Math.random() * 3)]
     const isReady = ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(actualType), id = Math.random().toString(36).substr(2, 9)
-    const newB = { id, type: actualType, level: 1, progress: isReady ? 100 : 0, isReady, assignedWorkers: [], x: xIndex, z: zIndex, width: size.width, height: size.height }
+    const maxPickingId = state.buildings.reduce((max, b) => Math.max(max, b.pickingId || 0), 0)
+    const newB = { id, pickingId: maxPickingId + 1, type: actualType, level: 1, progress: isReady ? 100 : 0, isReady, assignedWorkers: [], x: xIndex, z: zIndex, width: size.width, height: size.height }
     const buildings = [...state.buildings, newB], newO = [...state.occupancyGrid]
     for (let i = xIndex; i < xIndex + size.width; i++) { newO[i] = [...newO[i]]; for (let j = zIndex; j < zIndex + size.height; j++) newO[i][j] = id }
     const humans = [...state.humans]

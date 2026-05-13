@@ -1,11 +1,13 @@
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import { Html } from '@react-three/drei'
 
 import * as THREE from 'three'
 import { TerrainManager } from '../../managers/TerrainManager'
 import { BOUNDARY, TILE_SIZE } from '../../constants/gameConfig'
+import { PICKING_LAYER } from '../scene/PickingSystem'
 
 interface HumanProps {
+  pickingId?: number
   position: [number, number]
   rotation: number
   state: string
@@ -14,7 +16,7 @@ interface HumanProps {
   outfitColor: string
 }
 
-export const Human = ({ position, rotation, state, name, color, outfitColor }: HumanProps) => {
+export const Human = ({ pickingId, position, rotation, state, name, color, outfitColor }: HumanProps) => {
   const meshRef = useRef<THREE.Group>(null!)
   
   const gridX = (position[0] + BOUNDARY) / TILE_SIZE
@@ -23,6 +25,13 @@ export const Human = ({ position, rotation, state, name, color, outfitColor }: H
 
   const actualOutfitColor = state === 'SLEEPING' ? '#333' : outfitColor
   const actualSkinColor = state === 'SLEEPING' ? '#555' : color
+
+  const pickingColor = useMemo(() => {
+    const id = (pickingId || 0) + 1 // Offset by 1
+    const r = Math.floor(id / 256) / 255
+    const g = (id % 256) / 255
+    return new THREE.Color(r, g, 254 / 255) // b=254 for humans
+  }, [pickingId])
 
   return (
     <group position={[position[0], yPos, position[1]]} rotation={[0, rotation, 0]} ref={meshRef}>
@@ -66,6 +75,12 @@ export const Human = ({ position, rotation, state, name, color, outfitColor }: H
           <meshStandardMaterial color="#442211" />
         </mesh>
       </group>
+
+      {/* Picking Mesh */}
+      <mesh layers-mask={1 << PICKING_LAYER} position={[0, 0.25, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.5, 6]} />
+        <meshBasicMaterial color={pickingColor} />
+      </mesh>
 
       {/* State Label */}
       <Html 

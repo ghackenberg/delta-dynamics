@@ -36,9 +36,16 @@ export const PickingSystem = () => {
 
     // 3. Render
     const currentRenderTarget = gl.getRenderTarget()
+    const originalClearColor = gl.getClearColor(new THREE.Color())
+    const originalClearAlpha = gl.getClearAlpha()
+
     gl.setRenderTarget(target)
+    gl.setClearColor(0x000000, 0) // Clear to transparent black
+    gl.clear()
     gl.render(scene, camera)
+    
     gl.setRenderTarget(currentRenderTarget)
+    gl.setClearColor(originalClearColor, originalClearAlpha)
 
     // 4. Restore Camera
     if (camera instanceof THREE.PerspectiveCamera || camera instanceof THREE.OrthographicCamera) {
@@ -63,11 +70,25 @@ export const PickingSystem = () => {
         setHoveredCell(null)
         setHoveredEntityId(null)
       }
-    } else if (b === 255) { // Entity encoding
-        setHoveredCell(null)
-    } else {
-        setHoveredCell(null)
-        setHoveredEntityId(null)
+    } else { // Entity encoding
+      setHoveredCell(null)
+      const rawPickingId = (r << 8) | g
+      const pickingId = rawPickingId - 1
+      const state = useStore.getState()
+      let foundId: string | null = null
+      
+      if (b === 255) { // Building / Tree
+        const building = state.buildings.find(b => b.pickingId === pickingId || b.pickingId === rawPickingId)
+        foundId = building ? building.id : null
+      } else if (b === 254) { // Human
+        const human = state.humans.find(h => h.pickingId === pickingId || h.pickingId === rawPickingId)
+        foundId = human ? human.id : null
+      } else if (b === 253) { // Animal
+        const animal = state.animals.find(a => a.pickingId === pickingId || a.pickingId === rawPickingId)
+        foundId = animal ? animal.id : null
+      }
+      
+      setHoveredEntityId(foundId)
     }
   }, -1) // Run BEFORE the main render pass (priority < 0)
 

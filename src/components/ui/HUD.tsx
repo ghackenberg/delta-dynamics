@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useStore } from '../../hooks/useStore'
 import type { BuildingType } from '../../types/game'
 
@@ -16,6 +17,19 @@ export const HUD = ({ onInitAI, onConsultAI }: { onInitAI: () => void, onConsult
 
   const setRainIntensity = useStore((state) => state.setRainIntensity)
   const rainIntensity = useStore((state) => state.rainIntensity)
+
+  const hoveredCell = useStore((state) => state.hoveredCell)
+  const hoveredEntityId = useStore((state) => state.hoveredEntityId)
+  const buildingsState = useStore((state) => state.buildings)
+  const humans = useStore((state) => state.humans)
+  const animals = useStore((state) => state.animals)
+
+  const hoveredEntity = useMemo(() => {
+    if (!hoveredEntityId) return null
+    return buildingsState.find(b => b.id === hoveredEntityId) ||
+           humans.find(h => h.id === hoveredEntityId) ||
+           animals.find(a => a.id === hoveredEntityId)
+  }, [hoveredEntityId, buildingsState, humans, animals])
 
   const hours = Math.floor(gameTime / 60)
   const minutes = Math.floor(gameTime % 60)
@@ -102,6 +116,71 @@ export const HUD = ({ onInitAI, onConsultAI }: { onInitAI: () => void, onConsult
           <span className="text-xs font-bold italic">Simulate Rain</span>
           <span className="text-[10px] mt-1 text-blue-200/60 text-center">Raises Water</span>
         </button>
+      </div>
+
+      {/* Right Area: Selection Info */}
+      <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col gap-4 items-end">
+        {hoveredEntity && (
+          <div className="bg-black/80 backdrop-blur-xl border border-white/20 p-6 rounded-2xl w-64 shadow-2xl animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Selected Entity</span>
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            </div>
+            
+            <h2 className="text-xl font-bold text-white mb-1">
+              {'name' in hoveredEntity 
+                ? hoveredEntity.name 
+                : hoveredEntity.type.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+            </h2>
+            <p className="text-xs text-white/60 mb-4 font-medium">
+              {(() => {
+                if ('state' in hoveredEntity) return `Status: ${hoveredEntity.state}`
+                if (hoveredEntity.type.startsWith('TREE')) return 'Nature / Resource'
+                return `Level ${hoveredEntity.level}`
+              })()}
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              {'progress' in hoveredEntity && !hoveredEntity.isReady && (
+                <div className="col-span-2 bg-white/5 rounded-lg p-3 border border-white/10">
+                  <div className="flex justify-between text-[10px] text-white/40 font-bold uppercase mb-2">
+                    <span>Construction</span>
+                    <span>{Math.floor(hoveredEntity.progress)}%</span>
+                  </div>
+                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-orange-500" style={{ width: `${hoveredEntity.progress}%` }} />
+                  </div>
+                </div>
+              )}
+              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                <span className="text-[10px] text-white/40 font-bold uppercase block mb-1">Category</span>
+                <span className="text-xs text-white font-mono">
+                  {(() => {
+                    if ('name' in hoveredEntity) return 'Human'
+                    if (hoveredEntity.type === 'DEER' || hoveredEntity.type === 'WOLF') return 'Animal'
+                    if (hoveredEntity.type.startsWith('TREE')) return 'Flora'
+                    return 'Building'
+                  })()}
+                </span>
+              </div>
+              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                <span className="text-[10px] text-white/40 font-bold uppercase block mb-1">ID</span>
+                <span className="text-[10px] text-white/60 font-mono truncate block">
+                  #{hoveredEntity.id.slice(0, 8)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hoveredCell && !hoveredEntity && (
+          <div className="bg-black/60 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl shadow-lg">
+            <span className="text-[10px] font-bold text-white/40 uppercase tracking-tighter mr-3">Grid Cell</span>
+            <span className="text-xs font-mono text-white/80">
+              X:{hoveredCell.x} Z:{hoveredCell.z}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Bottom Area: AI Panel & Controls */}

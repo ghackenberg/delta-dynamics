@@ -1,10 +1,12 @@
 import { useMemo } from 'react'
+import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
 import { BUILDING_SIZES, BUILDING_COLORS, GRID_SIZE, TILE_SIZE, OFFSET, BOUNDARY } from '../../constants/gameConfig'
 import { Human } from '../entities/Human'
 import { InstancedTrees } from './InstancedTrees'
 import { InstancedAnimals } from '../entities/InstancedAnimals'
 import { TerrainManager } from '../../managers/TerrainManager'
+import { PICKING_LAYER } from './PickingSystem'
 
 export const GameGrid = () => {
   const buildings = useStore((state) => state.buildings)
@@ -49,6 +51,11 @@ export const GameGrid = () => {
     const hCenter = TerrainManager.getInstance().getInterpolatedHeight(gridX, gridZ)
     
     const colors = BUILDING_COLORS[building.type] || BUILDING_COLORS.DEFAULT
+    const pickingColor = new THREE.Color(
+      Math.floor(((building.pickingId || 0) + 1) / 256) / 255,
+      (((building.pickingId || 0) + 1) % 256) / 255,
+      1.0 // b=255 for buildings
+    )
     
     if (building.type === 'FENCE') {
        return (
@@ -56,6 +63,10 @@ export const GameGrid = () => {
           <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.05, 0.5, 0.2]} />
             <meshStandardMaterial color={colors.corpus} roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 0.25, 0]} layers-mask={1 << PICKING_LAYER}>
+            <boxGeometry args={[0.05, 0.5, 0.2]} />
+            <meshBasicMaterial color={pickingColor} />
           </mesh>
         </group>
        )
@@ -83,6 +94,11 @@ export const GameGrid = () => {
               />
             </mesh>
           </group>
+          {/* Picking Mesh (Solid box even if not ready) */}
+          <mesh position={[0, meshScale / 3, 0]} layers-mask={1 << PICKING_LAYER}>
+            <boxGeometry args={[meshScale, meshScale / 1.5, meshScale]} />
+            <meshBasicMaterial color={pickingColor} />
+          </mesh>
         </group>
       )
     }
@@ -162,6 +178,7 @@ export const GameGrid = () => {
       {humans.map(human => (
         <Human
           key={human.id}
+          pickingId={human.pickingId}
           position={human.position}
           rotation={human.rotation}
           state={human.state}

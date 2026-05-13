@@ -559,7 +559,7 @@ export const Terrain = () => {
       
       {/* Picking Mesh */}
       <mesh 
-        layers={PICKING_LAYER}
+        layers-mask={1 << PICKING_LAYER}
         frustumCulled={false} 
         position={[0, 0, 0]} 
         geometry={staticGeometry}
@@ -569,7 +569,7 @@ export const Terrain = () => {
 
       {/* Water Picking Mesh */}
       <mesh 
-        layers={PICKING_LAYER}
+        layers-mask={1 << PICKING_LAYER}
         frustumCulled={false} 
         position={[0, 0, 0]} 
         geometry={staticGeometry}

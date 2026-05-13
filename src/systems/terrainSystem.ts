@@ -70,7 +70,19 @@ export const generateInitialTerrain = () => {
         const treeTypes: BuildingType[] = ['TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH']
         const randomTree = treeTypes[Math.floor(Math.random() * treeTypes.length)]
         const id = Math.random().toString(36).substr(2, 9)
-        buildings.push({ id, type: randomTree, level: 1, progress: 100, isReady: true, assignedWorkers: [], x: i, z: j, width: 1, height: 1 })
+        buildings.push({ 
+          id, 
+          pickingId: buildings.length + 1, // Simple sequential ID for initial trees
+          type: randomTree, 
+          level: 1, 
+          progress: 100, 
+          isReady: true, 
+          assignedWorkers: [], 
+          x: i, 
+          z: j, 
+          width: 1, 
+          height: 1 
+        })
         occupancyGrid[i][j] = id
       }
     }

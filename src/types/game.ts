@@ -4,6 +4,7 @@ export type BuildingType = 'HOUSE' | 'FARM' | 'LUMBER_MILL' | 'QUARRY' | 'NONE' 
 
 export interface BuildingInstance {
   id: string
+  pickingId?: number
   type: BuildingType
   level: number
   progress: number 
@@ -17,6 +18,7 @@ export interface BuildingInstance {
 
 export interface Human {
   id: string
+  pickingId?: number
   name: string
   position: [number, number]
   rotation: number
@@ -32,6 +34,7 @@ export type AnimalType = 'DEER' | 'WOLF'
 
 export interface Animal {
   id: string
+  pickingId?: number
   type: AnimalType
   position: [number, number]
   rotation: number
