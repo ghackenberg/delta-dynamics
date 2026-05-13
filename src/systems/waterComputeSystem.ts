@@ -77,7 +77,7 @@ export class WaterComputeSystem {
         this.computeMaterial.uniforms.uLayerPermeability.value = permeability
     }
 
-    public setInitialWater(sWater: Float32Array, gWater: Float32Array) {
+    public setInitialWater(sWater: Float32Array, gWater: Float32Array, tHeight: Float32Array) {
         const data = new Float32Array(GRID_SIZE * GRID_SIZE * 4)
         for (let j = 0; j < GRID_SIZE; j++) {
             // Invert j for texture row
@@ -86,8 +86,11 @@ export class WaterComputeSystem {
             for (let i = 0; i < GRID_SIZE; i++) {
                 const gridIdx = j * GRID_SIZE + i
                 const texIdx = (rowOff + i) * 4
-                data[texIdx] = sWater[gridIdx]
+                const sw = sWater[gridIdx]
+                const th = tHeight[gridIdx]
+                data[texIdx] = th + sw // sL
                 data[texIdx + 1] = gWater[gridIdx]
+                data[texIdx + 2] = sw // Store depth too for easy readback or debugging
                 data[texIdx + 3] = 1.0
             }
         }
@@ -172,7 +175,7 @@ export class WaterComputeSystem {
         return this.renderTargetA.texture
     }
 
-    public readBack(sWater: Float32Array, gWater: Float32Array) {
+    public readBack(sWater: Float32Array, gWater: Float32Array, tHeight: Float32Array) {
         const prevTarget = this.renderer.getRenderTarget()
         this.renderer.setRenderTarget(this.renderTargetA)
         this.renderer.readRenderTargetPixels(this.renderTargetA, 0, 0, GRID_SIZE, GRID_SIZE, this.pixelBuffer)
@@ -185,7 +188,9 @@ export class WaterComputeSystem {
             for (let i = 0; i < GRID_SIZE; i++) {
                 const gridIdx = j * GRID_SIZE + i
                 const texIdx = (rowOff + i) * 4
-                sWater[gridIdx] = this.pixelBuffer[texIdx]
+                const sL = this.pixelBuffer[texIdx]
+                const th = tHeight[gridIdx]
+                sWater[gridIdx] = Math.max(0.0, sL - th)
                 gWater[gridIdx] = this.pixelBuffer[texIdx + 1]
             }
         }

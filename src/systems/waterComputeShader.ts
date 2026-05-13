@@ -19,8 +19,9 @@ void main() {
     
     float th = surface.r; // pre-calculated total height for efficiency
     float rl = surface.g;
-    float sw = water.r;
+    float sL = water.r;
     float gw = water.g;
+    float sw = max(0.0, sL - th);
 
     // Calculate aCap based on layer thicknesses and porosities
     float ac = 0.0;
@@ -30,8 +31,8 @@ void main() {
         ac += layerData.g * uLayerPorosity[int(layerData.r + 0.5)];
     }
 
-    float sL = th + sw;
-    float gL = th - 0.5 + (ac > 0.0 ? (gw / ac) : 0.0);
+    sL = th + sw;
+    float gL = th - 0.5 + (ac > 0.0 ? (gw / ac) * 0.5 : 0.0);
 
     // Surface Water Flow (Diffusion-like)
     float sDelta = 0.0;
@@ -50,15 +51,15 @@ void main() {
         vec4 nWater = texture2D(uWater, nUv);
         vec4 nSurface = texture2D(uTerrainSurface, nUv);
         
-        float nSL = nSurface.r + nWater.r;
+        float nSL = nWater.r; // Now storing sL in R
         float sDiff = sL - nSL;
         if (sDiff > 0.0001) {
-            float f = sDiff * 0.05;
-            float clampedF = min(f, sw * 0.1);
+            float f = sDiff * 0.15;
+            float clampedF = min(f, sw * 0.2);
             sDelta -= clampedF;
         } else if (sDiff < -0.0001) {
-            float f = -sDiff * 0.05;
-            float clampedF = min(f, nWater.r * 0.1);
+            float f = -sDiff * 0.15;
+            float clampedF = min(f, max(0.0, nWater.r - nSurface.r) * 0.2);
             sDelta += clampedF;
         }
 
@@ -70,7 +71,7 @@ void main() {
             nAC += nLayerData.g * uLayerPorosity[int(nLayerData.r + 0.5)];
         }
 
-        float nGL = nSurface.r - 0.5 + (nAC > 0.0 ? (nWater.g / nAC) : 0.0);
+        float nGL = nSurface.r - 0.5 + (nAC > 0.0 ? (nWater.g / nAC) * 0.5 : 0.0);
         float gDiff = gL - nGL;
         if (gDiff > 0.0001) {
             float f = gDiff * 0.005;
@@ -124,6 +125,7 @@ void main() {
         gw = ac;
     }
 
-    gl_FragColor = vec4(sw, gw, 0.0, 1.0);
+    sL = th + sw;
+    gl_FragColor = vec4(sL, gw, sw, 1.0);
 }
 `;

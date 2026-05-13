@@ -23,18 +23,18 @@ export const runWaterSimulationInPlace = (state: GameState) => {
         if (sw < 0.00001 && gw < 0.00001) continue
 
         const th = tHeight[idx], ac = aCap[idx]
-        const sL = th + sw, gL = th - 0.5 + (ac > 0 ? (gw / ac) : 0)
+        const sL = th + sw, gL = th - 0.5 + (ac > 0 ? (gw / ac) * 0.5 : 0)
 
         const check = (ni: number, nj: number) => {
           const nIdx = ni * GRID_SIZE + nj
           const nEffS = tHeight[nIdx] + sWater[nIdx]
           const sDiff = sL - nEffS
           if (sDiff > 0.0001) {
-            const f = sDiff * 0.05
-            const clampedF = Math.min(f, sw * 0.1)
+            const f = sDiff * 0.15
+            const clampedF = Math.min(f, sw * 0.2)
             sDeltas[idx] -= clampedF; sDeltas[nIdx] += clampedF
           }
-          const nGL = tHeight[nIdx] - 0.5 + (aCap[nIdx] > 0 ? (gWater[nIdx] / aCap[nIdx]) : 0)
+          const nGL = tHeight[nIdx] - 0.5 + (aCap[nIdx] > 0 ? (gWater[nIdx] / aCap[nIdx]) * 0.5 : 0)
           const gDiff = gL - nGL
           if (gDiff > 0.0001) {
             const f = gDiff * 0.005

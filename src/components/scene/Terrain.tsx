@@ -44,6 +44,7 @@ export const Terrain = () => {
   const terrainVersion = useStore((state) => state.terrainVersion)
   const sWater = useStore((state) => state.sWater)
   const gWater = useStore((state) => state.gWater)
+  const tHeight = useStore((state) => state.tHeight)
   const rLevel = useStore((state) => state.rLevel)
   const rainIntensity = useStore((state) => state.rainIntensity)
   const day = useStore((state) => state.day)
@@ -56,8 +57,8 @@ export const Terrain = () => {
   const [gpuSim] = useState(() => new WaterComputeSystem(gl))
 
   useEffect(() => {
-    gpuSim.setInitialWater(sWater, gWater)
-  }, [gpuSim, sWater, gWater]) // Only on mount or if water changes
+    gpuSim.setInitialWater(sWater, gWater, tHeight)
+  }, [gpuSim, sWater, gWater, tHeight]) // Only on mount or if water/terrain changes
 
   // Initialize stable objects once
   const layerTex = useMemo(() => {
@@ -294,10 +295,9 @@ export const Terrain = () => {
       '#include <begin_vertex>',
       `#include <begin_vertex>
       vGridUv = uv;
-      vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
-      float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
-      float sw = bilinear(waterMap, uv, vec2(100.0)).r;
-      transformed.y = h + sw;
+      float sL = bilinear(waterMap, uv, vec2(100.0)).r;
+      float sw = bilinear(waterMap, uv, vec2(100.0)).b;
+      transformed.y = sL;
       if (sw > 0.05) {
         transformed.y += sin(uTime * 2.0 + (position.x + position.z) * 5.0) * 0.005;
       }
@@ -375,10 +375,11 @@ export const Terrain = () => {
 
       vec2 sUv = (vGridUv * 100.0 + 0.5) / 101.0;
       float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
-      float sw = bilinear(waterMap, vGridUv, vec2(100.0)).r;
+      float sL = bilinear(waterMap, vGridUv, vec2(100.0)).r;
+      float sw = bilinear(waterMap, vGridUv, vec2(100.0)).b;
       
       vSurfaceY = h;
-      vWaterY = h + sw;
+      vWaterY = sL;
 
       if (uv.y > 0.5) {
         transformed.y = ${isWater ? 'vWaterY' : 'vSurfaceY'};
@@ -470,10 +471,9 @@ export const Terrain = () => {
       '#include <begin_vertex>',
       `#include <begin_vertex>
       vGridUv = uv;
-      vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
-      float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
-      float sw = bilinear(waterMap, uv, vec2(100.0)).r;
-      transformed.y = h + sw;
+      float sL = bilinear(waterMap, uv, vec2(100.0)).r;
+      float sw = bilinear(waterMap, uv, vec2(100.0)).b;
+      transformed.y = sL;
       if (sw > 0.05) {
         transformed.y += sin(uTime * 2.0 + (position.x + position.z) * 5.0) * 0.005;
       }
@@ -524,7 +524,7 @@ export const Terrain = () => {
     }
 
     // 2. Read back to CPU for entity logic
-    gpuSim.readBack(sWater, gWater)
+    gpuSim.readBack(sWater, gWater, tHeight)
 
     // 3. Update Uniforms
     uniforms.waterMap.value = gpuSim.getWaterTexture()
