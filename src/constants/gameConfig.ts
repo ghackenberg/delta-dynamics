@@ -26,13 +26,13 @@ export const BUILDING_SIZES: Record<BuildingType, { width: number, height: numbe
   NONE: { width: 1, height: 1 }
 }
 
-export const MATERIAL_PROPERTIES: Record<LayerType, { porosity: number, permeability: number }> = {
-  ROCK: { porosity: 0.05, permeability: 0.01 },
-  GRAVEL: { porosity: 0.3, permeability: 0.8 },
-  HUMUS: { porosity: 0.4, permeability: 0.2 },
-  SAND: { porosity: 0.35, permeability: 0.4 },
-  PAVEMENT: { porosity: 0.02, permeability: 0.001 },
-  WATER: { porosity: 1.0, permeability: 1.0 }
+export const MATERIAL_PROPERTIES: Record<LayerType, { porosity: number, permeability: number, color: string }> = {
+  ROCK: { porosity: 0.05, permeability: 0.01, color: '#5c5c5c' },
+  GRAVEL: { porosity: 0.3, permeability: 0.8, color: '#96897f' },
+  HUMUS: { porosity: 0.4, permeability: 0.2, color: '#4a704a' },
+  SAND: { porosity: 0.35, permeability: 0.4, color: '#d4c29d' },
+  PAVEMENT: { porosity: 0.02, permeability: 0.001, color: '#6b6b6b' },
+  WATER: { porosity: 1.0, permeability: 1.0, color: '#4a90e2' }
 }
 
 export const INITIAL_RESOURCES = { food: 500, wood: 200, stone: 100, gold: 100 }

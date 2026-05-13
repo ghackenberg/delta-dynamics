@@ -3,8 +3,9 @@ import { useMemo, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
-import { GRID_SIZE, TILE_SIZE, SEA_LEVEL } from '../../constants/gameConfig'
+import { GRID_SIZE, TILE_SIZE, SEA_LEVEL, MATERIAL_PROPERTIES } from '../../constants/gameConfig'
 import { WaterComputeSystem } from '../../systems/waterComputeSystem'
+import type { LayerType } from '../../types/game'
 
 const BILINEAR_GLSL = `
   vec4 bilinear(sampler2D tex, vec2 uv, vec2 res) {
@@ -60,6 +61,11 @@ export const Terrain = () => {
     return tex
   }, [])
 
+  const layerColors = useMemo(() => {
+    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT']
+    return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].color))
+  }, [])
+
   // Update terrain texture when vertices change
   useEffect(() => {
     gpuSim.updateTerrain(terrainVertices, rLevel)
@@ -110,10 +116,11 @@ export const Terrain = () => {
   const uniforms = useMemo(() => ({
     uTerrainLayers: { value: layerTex },
     uTerrainSurface: { value: surfaceTex },
+    uLayerColors: { value: layerColors },
     waterMap: { value: null as THREE.Texture | null },
     uTime: { value: 0 },
     uTileSize: { value: TILE_SIZE }
-  }), [layerTex, surfaceTex])
+  }), [layerTex, surfaceTex, layerColors])
 
   const staticGeometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(GRID_SIZE * TILE_SIZE, GRID_SIZE * TILE_SIZE, GRID_SIZE, GRID_SIZE)
@@ -124,6 +131,7 @@ export const Terrain = () => {
   const onBeforeCompileTerrain = (shader: THREE.ShaderLibShader) => {
     shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+    shader.uniforms.uLayerColors = uniforms.uLayerColors
     shader.uniforms.uTileSize = uniforms.uTileSize
     
     shader.vertexShader = shader.vertexShader.replace(
@@ -149,29 +157,19 @@ export const Terrain = () => {
       '#include <common>',
       `#include <common>
       uniform sampler2D uTerrainSurface;
+      uniform vec3 uLayerColors[5];
       varying float vType;
       varying vec2 vGridUv;`
     ).replace(
       '#include <color_fragment>',
       `#include <color_fragment>
-      vec3 cRock = vec3(0.15, 0.15, 0.15);
-      vec3 cGravel = vec3(0.25, 0.22, 0.2);
-      vec3 cSand = vec3(0.35, 0.3, 0.2);
-      vec3 cHumus = vec3(0.12, 0.22, 0.12);
-      vec3 cPavement = vec3(0.25, 0.25, 0.25);
-      
       // Discrete Cell-based Material Sampling
       vec2 gridRes = vec2(100.0);
       vec2 texRes = vec2(101.0);
       vec2 cellCoord = clamp(floor(vGridUv * gridRes), 0.0, 99.0);
       float cellType = texture2D(uTerrainSurface, (cellCoord + 0.5) / texRes).b;
       
-      vec3 terrainColor = cRock;
-      if (cellType < 0.5) terrainColor = cRock;
-      else if (cellType < 1.5) terrainColor = cGravel;
-      else if (cellType < 2.5) terrainColor = cSand;
-      else if (cellType < 3.5) terrainColor = cHumus;
-      else terrainColor = cPavement;
+      vec3 terrainColor = uLayerColors[int(cellType + 0.5)];
       
       // Grid and Boundary lines
       vec2 grid = fract(vGridUv * 100.0);
@@ -229,6 +227,7 @@ export const Terrain = () => {
   const onBeforeCompileSide = (shader: THREE.ShaderLibShader, edge: 'N' | 'S' | 'E' | 'W', isWater: boolean = false) => {
     shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+    shader.uniforms.uLayerColors = uniforms.uLayerColors
     shader.uniforms.waterMap = uniforms.waterMap
     shader.uniforms.uTime = uniforms.uTime
     
@@ -274,6 +273,7 @@ export const Terrain = () => {
       uniform sampler2D uTerrainLayers;
       uniform sampler2D uTerrainSurface;
       uniform sampler2D waterMap;
+      uniform vec3 uLayerColors[5];
       varying float vWorldY;
       varying float vSurfaceY;
       varying float vWaterY;
@@ -288,12 +288,6 @@ export const Terrain = () => {
         vec3 deepColor = vec3(0.02, 0.1, 0.3);
         diffuseColor.rgb = mix(shallowColor, deepColor, 0.5);
       ` : `
-        vec3 cRock = vec3(0.15, 0.15, 0.15);
-        vec3 cGravel = vec3(0.25, 0.22, 0.2);
-        vec3 cSand = vec3(0.35, 0.3, 0.2);
-        vec3 cHumus = vec3(0.12, 0.22, 0.12);
-        vec3 cPavement = vec3(0.25, 0.25, 0.25);
-
         vec2 sUv = (vGridUv * 100.0 + 0.5) / 101.0;
         
         // Smoothly interpolated layer thicknesses
@@ -304,13 +298,13 @@ export const Terrain = () => {
         float cellType = texture2D(uTerrainSurface, (cellCoord + 0.5) / 101.0).b;
 
         float h = -5.0;
-        vec3 terrainColor = cRock;
+        vec3 terrainColor = uLayerColors[0];
 
-        if (vWorldY > h + layers.r + layers.g + layers.b + layers.a) terrainColor = cPavement;
-        else if (vWorldY > h + layers.r + layers.g + layers.b) terrainColor = cHumus;
-        else if (vWorldY > h + layers.r + layers.g) terrainColor = cSand;
-        else if (vWorldY > h + layers.r) terrainColor = cGravel;
-        else terrainColor = cRock;
+        if (vWorldY > h + layers.r + layers.g + layers.b + layers.a) terrainColor = uLayerColors[4];
+        else if (vWorldY > h + layers.r + layers.g + layers.b) terrainColor = uLayerColors[3];
+        else if (vWorldY > h + layers.r + layers.g) terrainColor = uLayerColors[2];
+        else if (vWorldY > h + layers.r) terrainColor = uLayerColors[1];
+        else terrainColor = uLayerColors[0];
 
         diffuseColor.rgb = terrainColor * 0.7; // Darken sides
       `}
