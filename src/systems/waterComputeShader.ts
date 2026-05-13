@@ -1,7 +1,9 @@
 export const waterFragmentShader = `
 uniform sampler2D uWater;
 uniform sampler2D uTerrainLayers;  // R: rock, G: gravel, B: sand, A: humus
-uniform sampler2D uTerrainSurface; // R: pavement, G: rLevel, B: topType, A: height
+uniform sampler2D uTerrainSurface; // R: height, G: rLevel, B: topType, A: pavement
+uniform float uLayerPorosity[5];
+uniform float uLayerPermeability[5];
 uniform float uRain;
 uniform float uSeaLevel;
 uniform float uTime;
@@ -21,8 +23,12 @@ void main() {
     float gw = water.g;
 
     // Calculate aCap based on layer thicknesses and porosities
-    // ROCK: 0.05, GRAVEL: 0.3, SAND: 0.35, HUMUS: 0.4, PAVEMENT: 0.02
-    float ac = layers.r * 0.05 + layers.g * 0.3 + layers.b * 0.35 + layers.a * 0.4 + surface.a * 0.02;
+    // ROCK: idx 0, GRAVEL: idx 1, SAND: idx 2, HUMUS: idx 3, PAVEMENT: idx 4
+    float ac = layers.r * uLayerPorosity[0] + 
+               layers.g * uLayerPorosity[1] + 
+               layers.b * uLayerPorosity[2] + 
+               layers.a * uLayerPorosity[3] + 
+               surface.a * uLayerPorosity[4];
 
     float sL = th + sw;
     float gL = th - 0.5 + (ac > 0.0 ? (gw / ac) : 0.0);
@@ -58,7 +64,11 @@ void main() {
 
         // We also need nAC for nGL
         vec4 nLayers = texture2D(uTerrainLayers, nUv);
-        float nAC = nLayers.r * 0.05 + nLayers.g * 0.3 + nLayers.b * 0.35 + nLayers.a * 0.4 + nSurface.a * 0.02;
+        float nAC = nLayers.r * uLayerPorosity[0] + 
+                    nLayers.g * uLayerPorosity[1] + 
+                    nLayers.b * uLayerPorosity[2] + 
+                    nLayers.a * uLayerPorosity[3] + 
+                    nSurface.a * uLayerPorosity[4];
 
         float nGL = nSurface.r - 0.5 + (nAC > 0.0 ? (nWater.g / nAC) : 0.0);
         float gDiff = gL - nGL;
@@ -98,9 +108,12 @@ void main() {
         }
     }
 
-    // Infiltration
+    // Infiltration (Using uLayerPermeability of top layer)
+    int topIdx = int(surface.b + 0.5);
+    float perm = uLayerPermeability[topIdx];
+    
     if (sw > 0.0 && gw < ac) {
-        float amt = min(sw, min(ac - gw, 0.001));
+        float amt = min(sw, min(ac - gw, 0.001 * perm / 0.2)); // Adjusted for permeability (normalized to Humus 0.2)
         sw -= amt;
         gw += amt;
     }

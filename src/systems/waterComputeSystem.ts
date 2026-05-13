@@ -45,6 +45,8 @@ export class WaterComputeSystem {
                 uWater: { value: null },
                 uTerrainLayers: { value: this.terrainLayersTexture },
                 uTerrainSurface: { value: this.terrainSurfaceTexture },
+                uLayerPorosity: { value: new Float32Array(5) },
+                uLayerPermeability: { value: new Float32Array(5) },
                 uRain: { value: 0 },
                 uSeaLevel: { value: -0.8 },
                 uTime: { value: 0 },
@@ -66,6 +68,11 @@ export class WaterComputeSystem {
         this.scene.add(this.mesh)
 
         this.pixelBuffer = new Float32Array(GRID_SIZE * GRID_SIZE * 4)
+    }
+
+    public updateMaterialProperties(porosity: Float32Array, permeability: Float32Array) {
+        this.computeMaterial.uniforms.uLayerPorosity.value = porosity
+        this.computeMaterial.uniforms.uLayerPermeability.value = permeability
     }
 
     public setInitialWater(sWater: Float32Array, gWater: Float32Array) {

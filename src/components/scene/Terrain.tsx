@@ -66,9 +66,20 @@ export const Terrain = () => {
     return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].color))
   }, [])
 
+  const layerPorosities = useMemo(() => {
+    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT']
+    return new Float32Array(types.map(t => MATERIAL_PROPERTIES[t].porosity))
+  }, [])
+
+  const layerPermeabilities = useMemo(() => {
+    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT']
+    return new Float32Array(types.map(t => MATERIAL_PROPERTIES[t].permeability))
+  }, [])
+
   // Update terrain texture when vertices change
   useEffect(() => {
     gpuSim.updateTerrain(terrainVertices, rLevel)
+    gpuSim.updateMaterialProperties(layerPorosities, layerPermeabilities)
 
     // Also update rendering textures
     const lData = layerTex.image.data as Float32Array
@@ -111,7 +122,7 @@ export const Terrain = () => {
     }
     layerTex.needsUpdate = true
     surfaceTex.needsUpdate = true
-  }, [gpuSim, terrainVertices, rLevel, layerTex, surfaceTex])
+  }, [gpuSim, terrainVertices, rLevel, layerTex, surfaceTex, layerPorosities, layerPermeabilities])
 
   const uniforms = useMemo(() => ({
     uTerrainLayers: { value: layerTex },
