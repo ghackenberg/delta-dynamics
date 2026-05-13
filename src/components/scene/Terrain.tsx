@@ -7,6 +7,7 @@ import { GRID_SIZE, TILE_SIZE, SEA_LEVEL, MATERIAL_PROPERTIES, MAX_GPU_LAYERS, L
 import { WaterComputeSystem } from '../../systems/waterComputeSystem'
 import type { LayerType } from '../../types/game'
 import { TerrainManager } from '../../managers/TerrainManager'
+import { PICKING_LAYER } from './PickingSystem'
 
 const BILINEAR_GLSL = `
   vec4 bilinear(sampler2D tex, vec2 uv, vec2 res) {
@@ -43,7 +44,6 @@ export const Terrain = () => {
   const terrainVersion = useStore((state) => state.terrainVersion)
   const sWater = useStore((state) => state.sWater)
   const gWater = useStore((state) => state.gWater)
-  const tHeight = useStore((state) => state.tHeight)
   const rLevel = useStore((state) => state.rLevel)
   const rainIntensity = useStore((state) => state.rainIntensity)
   const day = useStore((state) => state.day)
@@ -52,7 +52,6 @@ export const Terrain = () => {
   const placeBuilding = useStore((state) => state.placeBuilding)
   const selectedBuildingType = useStore((state) => state.selectedBuildingType)
   const hoveredCell = useStore((state) => state.hoveredCell)
-  const setHoveredCell = useStore((state) => state.setHoveredCell)
 
   const [gpuSim] = useState(() => new WaterComputeSystem(gl))
 
@@ -82,6 +81,11 @@ export const Terrain = () => {
   const layerColors = useMemo(() => {
     const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
     return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].color))
+  }, [])
+
+  const layerHighlightColors = useMemo(() => {
+    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
+    return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].highlightColor))
   }, [])
 
   const layerPorosities = useMemo(() => {
@@ -148,10 +152,12 @@ export const Terrain = () => {
     uTerrainLayers: { value: layerTex },
     uTerrainSurface: { value: surfaceTex },
     uLayerColors: { value: layerColors },
+    uLayerHighlightColors: { value: layerHighlightColors },
+    uHoveredCell: { value: new THREE.Vector2(-1, -1) },
     waterMap: { value: null as THREE.Texture | null },
     uTime: { value: 0 },
     uTileSize: { value: TILE_SIZE }
-  }), [layerTex, surfaceTex, layerColors])
+  }), [layerTex, surfaceTex, layerColors, layerHighlightColors])
 
   const staticGeometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(GRID_SIZE * TILE_SIZE, GRID_SIZE * TILE_SIZE, GRID_SIZE, GRID_SIZE)
@@ -163,6 +169,8 @@ export const Terrain = () => {
     shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.uniforms.uLayerColors = uniforms.uLayerColors
+    shader.uniforms.uLayerHighlightColors = uniforms.uLayerHighlightColors
+    shader.uniforms.uHoveredCell = uniforms.uHoveredCell
     shader.uniforms.uTileSize = uniforms.uTileSize
     
     shader.vertexShader = shader.vertexShader.replace(
@@ -188,7 +196,9 @@ export const Terrain = () => {
       '#include <common>',
       `#include <common>
       uniform sampler2D uTerrainSurface;
+      uniform vec2 uHoveredCell;
       uniform vec3 uLayerColors[6];
+      uniform vec3 uLayerHighlightColors[6];
       varying float vType;
       varying vec2 vGridUv;`
     ).replace(
@@ -200,8 +210,15 @@ export const Terrain = () => {
       vec2 cellCoord = clamp(floor(vGridUv * gridRes), 0.0, 99.0);
       float cellType = texture2D(uTerrainSurface, (cellCoord + 0.5) / texRes).b;
       
-      vec3 terrainColor = uLayerColors[int(cellType + 0.5)];
+      int typeIdx = int(cellType + 0.5);
+      vec3 terrainColor = uLayerColors[typeIdx];
       
+      // Hover Highlight (Inverted Y to match picking)
+      vec2 gridCell = floor(vGridUv * gridRes);
+      if (gridCell.x == uHoveredCell.x && (gridRes.y - 1.0 - gridCell.y) == uHoveredCell.y) {
+          terrainColor = mix(terrainColor, uLayerHighlightColors[typeIdx], 0.6);
+      }
+
       // Grid and Boundary lines
       vec2 grid = fract(vGridUv * 100.0);
       float edgeDist = 0.05;
@@ -228,6 +245,32 @@ export const Terrain = () => {
       
       diffuseColor.rgb = terrainColor;`
     )
+  }
+
+  const onBeforeCompilePicking = (shader: THREE.ShaderLibShader) => {
+    shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+    shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `#include <common>
+        uniform sampler2D uTerrainSurface;
+        varying vec2 vGridUv;
+        ${BILINEAR_GLSL}`
+      ).replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        vGridUv = uv;
+        vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
+        transformed.y = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;`
+      )
+    shader.fragmentShader = `
+      varying vec2 vGridUv;
+      void main() {
+        float x = (clamp(floor(vGridUv.x * 100.0), 0.0, 99.0) + 1.0) / 255.0;
+        // Invert Y UV to match grid Z if mirrored
+        float z = (clamp(floor((1.0 - vGridUv.y) * 100.0), 0.0, 99.0) + 1.0) / 255.0;
+        gl_FragColor = vec4(x, z, 0.0, 1.0);
+      }
+    `
   }
 
   const terrainDepthMaterial = useMemo(() => {
@@ -429,22 +472,24 @@ export const Terrain = () => {
     uniforms.waterMap.value = gpuSim.getWaterTexture()
     uniforms.uTime.value = state.clock.getElapsedTime()
     
+    if (hoveredCell) {
+        uniforms.uHoveredCell.value.set(hoveredCell.x, hoveredCell.z)
+    } else {
+        uniforms.uHoveredCell.value.set(-1, -1)
+    }
+
     useStore.setState({ heightTexture: surfaceTex, waterTexture: gpuSim.getWaterTexture() as THREE.DataTexture })
   })
-
-  const getGridCoords = (point: THREE.Vector3) => {
-    const offset = (GRID_SIZE * TILE_SIZE) / 2
-    const x = Math.floor((point.x + offset) / TILE_SIZE)
-    const z = Math.floor((point.z + offset) / TILE_SIZE)
-    return { x: Math.max(0, Math.min(GRID_SIZE - 1, x)), z: Math.max(0, Math.min(GRID_SIZE - 1, z)) }
-  }
 
   const offset = (GRID_SIZE * TILE_SIZE) / 2
 
   return (
     <group 
-      onPointerMove={(e) => setHoveredCell(getGridCoords(e.point))} 
-      onPointerDown={(e) => e.button === 0 && placeBuilding(getGridCoords(e.point).x, getGridCoords(e.point).z, selectedBuildingType)}
+      onPointerDown={(e) => {
+        if (e.button === 0 && hoveredCell) {
+            placeBuilding(hoveredCell.x, hoveredCell.z, selectedBuildingType)
+        }
+      }}
     >
       <mesh 
         receiveShadow 
@@ -457,6 +502,16 @@ export const Terrain = () => {
         <meshStandardMaterial flatShading onBeforeCompile={onBeforeCompileTerrain} />
       </mesh>
       
+      {/* Picking Mesh */}
+      <mesh 
+        layers={PICKING_LAYER}
+        frustumCulled={false} 
+        position={[0, 0, 0]} 
+        geometry={staticGeometry}
+      >
+        <meshBasicMaterial onBeforeCompile={onBeforeCompilePicking} />
+      </mesh>
+
       <mesh 
         receiveShadow 
         frustumCulled={false} 
@@ -493,13 +548,6 @@ export const Terrain = () => {
       <mesh position={[offset, 0, 0]} rotation={[0, Math.PI/2, 0]} geometry={sideGeometry} frustumCulled={false}>
         <meshStandardMaterial transparent side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'E', true)} />
       </mesh>
-
-      {hoveredCell && (
-        <mesh position={[hoveredCell.x * TILE_SIZE - offset + TILE_SIZE/2, tHeight[hoveredCell.z * GRID_SIZE + hoveredCell.x] + sWater[hoveredCell.z * GRID_SIZE + hoveredCell.x] + 0.05, hoveredCell.z * TILE_SIZE - offset + TILE_SIZE/2]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[TILE_SIZE, TILE_SIZE]} />
-          <meshBasicMaterial color="yellow" transparent opacity={0.3} />
-        </mesh>
-      )}
     </group>
   )
 }

@@ -43,7 +43,7 @@ export const useStore = create<GameState>((set, get) => ({
   sWater: initialSWater, gWater: initialGWater, tHeight: initialTHeight, aCap: initialACap, rLevel: initialRLevel,
   heightTexture, waterTexture,
   humans: initialHumans,
-  animals: initialAnimals, aiStatus: 'Idle', isAiLoading: false, aiResponse: '', selectedBuildingType: 'HOUSE', hoveredCell: null,
+  animals: initialAnimals, aiStatus: 'Idle', isAiLoading: false, aiResponse: '', selectedBuildingType: 'HOUSE', hoveredCell: null, hoveredEntityId: null,
 
   simulateWater: () => {
     // Now handled on GPU in Terrain.tsx
@@ -88,6 +88,7 @@ export const useStore = create<GameState>((set, get) => ({
 
   setSelectedBuildingType: (type) => set({ selectedBuildingType: type }),
   setHoveredCell: (cell) => set({ hoveredCell: cell }),
+  setHoveredEntityId: (id) => set({ hoveredEntityId: id }),
   spawnHuman: (homeId) => set((state) => {
     const home = state.buildings.find(b => b.id === homeId)
     if (!home) return state

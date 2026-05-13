@@ -2,10 +2,12 @@ import { MapControls, ContactShadows, Environment } from '@react-three/drei'
 import { GameGrid } from './GameGrid'
 import { Terrain } from './Terrain'
 import { DayNightCycle } from './DayNightCycle'
+import { PickingSystem } from './PickingSystem'
 
 export const Scene = () => {
   return (
     <>
+      <PickingSystem />
       <DayNightCycle />
       
       <Terrain />
