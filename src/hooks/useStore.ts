@@ -116,6 +116,24 @@ export const useStore = create<GameState>((set, get) => ({
       return state
     }
     if (xIndex + size.width > GRID_SIZE || zIndex + size.height > GRID_SIZE) return state
+    
+    // Tree placement restriction: strictly on HUMUS cells (all 4 vertices)
+    const isTreeType = ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(type)
+    if (isTreeType) {
+      let isHumusCell = true
+      for (let di = 0; di <= 1; di++) {
+        for (let dj = 0; dj <= 1; dj++) {
+          const layers = state.terrainVertices[xIndex + di][zIndex + dj]
+          if (layers[layers.length - 1].type !== 'HUMUS') {
+            isHumusCell = false
+            break
+          }
+        }
+        if (!isHumusCell) break
+      }
+      if (!isHumusCell) return state
+    }
+
     for (let i = xIndex; i < xIndex + size.width; i++) for (let j = zIndex; j < zIndex + size.height; j++) if (state.occupancyGrid[i][j] || state.sWater[j * GRID_SIZE + i] > 0.05) return state
     if (['HOUSE', 'FARM', 'LUMBER_MILL', 'QUARRY'].includes(type) && !TerrainManager.getInstance().isAreaFlat(xIndex, zIndex, size.width, size.height)) return state
     

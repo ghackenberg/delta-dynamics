@@ -29,6 +29,23 @@ export const GameGrid = () => {
       return !!(b && ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(b.type))
     }
 
+    const isTreeType = ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(selectedBuildingType)
+    if (isTreeType) {
+      const vertices = TerrainManager.getInstance().getVertices()
+      let isHumusCell = true
+      for (let di = 0; di <= 1; di++) {
+        for (let dj = 0; dj <= 1; dj++) {
+          const v = vertices[x + di][z + dj]
+          if (v[v.length - 1].type !== 'HUMUS') {
+            isHumusCell = false
+            break
+          }
+        }
+        if (!isHumusCell) break
+      }
+      if (!isHumusCell) return false
+    }
+
     for (let i = x; i < x + size.width; i++) {
       for (let j = z; j < z + size.height; j++) {
         if (occupancyGrid[i][j]) return false

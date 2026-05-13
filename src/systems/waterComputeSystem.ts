@@ -80,9 +80,11 @@ export class WaterComputeSystem {
     public setInitialWater(sWater: Float32Array, gWater: Float32Array) {
         const data = new Float32Array(GRID_SIZE * GRID_SIZE * 4)
         for (let j = 0; j < GRID_SIZE; j++) {
-            const rowOff = j * GRID_SIZE
+            // Invert j for texture row
+            const texJ = GRID_SIZE - 1 - j
+            const rowOff = texJ * GRID_SIZE
             for (let i = 0; i < GRID_SIZE; i++) {
-                const gridIdx = rowOff + i
+                const gridIdx = j * GRID_SIZE + i
                 const texIdx = (rowOff + i) * 4
                 data[texIdx] = sWater[gridIdx]
                 data[texIdx + 1] = gWater[gridIdx]
@@ -111,7 +113,9 @@ export class WaterComputeSystem {
         const sData = this.terrainSurfaceTexture.image.data as Float32Array
         
         for (let j = 0; j < GRID_SIZE; j++) {
-            const rowOff = j * GRID_SIZE
+            // Invert j for texture row (v=0 is bottom/South)
+            const texJ = GRID_SIZE - 1 - j
+            const rowOff = texJ * GRID_SIZE
             for (let i = 0; i < GRID_SIZE; i++) {
                 const texIdx = (rowOff + i) * 4
                 const layers = terrainVertices[i][j]
@@ -136,7 +140,9 @@ export class WaterComputeSystem {
                 
                 const height = totalHeight - 5.0 // -5 is TERRAIN_BASE_Y
                 sData[texIdx] = height
-                sData[texIdx + 1] = rLevel[rowOff + i]
+                // Note: rLevel index also needs to match logic grid
+                const gridIdx = j * GRID_SIZE + i
+                sData[texIdx + 1] = rLevel[gridIdx]
                 sData[texIdx + 2] = topTypeIdx
                 sData[texIdx + 3] = pavementLayer ? pavementLayer.thickness : 0.0
             }
@@ -173,9 +179,11 @@ export class WaterComputeSystem {
         this.renderer.setRenderTarget(prevTarget)
 
         for (let j = 0; j < GRID_SIZE; j++) {
-            const rowOff = j * GRID_SIZE
+            // Invert j to get back to logic grid
+            const texJ = GRID_SIZE - 1 - j
+            const rowOff = texJ * GRID_SIZE
             for (let i = 0; i < GRID_SIZE; i++) {
-                const gridIdx = rowOff + i
+                const gridIdx = j * GRID_SIZE + i
                 const texIdx = (rowOff + i) * 4
                 sWater[gridIdx] = this.pixelBuffer[texIdx]
                 gWater[gridIdx] = this.pixelBuffer[texIdx + 1]

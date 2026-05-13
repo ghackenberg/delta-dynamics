@@ -110,7 +110,10 @@ export const Terrain = () => {
     const size = GRID_SIZE + 1
     
     for (let j = 0; j <= GRID_SIZE; j++) {
-      const rowOff = j * size
+      // Invert j for texture row to match Three.js v-coord (v=0 is bottom/South)
+      // Logic j=0 is North, should be v=1 (top row)
+      const texJ = GRID_SIZE - j
+      const rowOff = texJ * size
       for (let i = 0; i <= GRID_SIZE; i++) {
         const texIdx = (rowOff + i) * 4
         const layers = terrainVertices[i][j]

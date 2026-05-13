@@ -8,11 +8,25 @@ import { PICKING_LAYER } from './PickingSystem'
 
 const MAX_TREES = 5000
 
+const BILINEAR_GLSL = `
+  vec4 bilinear(sampler2D tex, vec2 uv, vec2 res) {
+      vec2 st = uv * res - 0.5;
+      vec2 i = floor(st);
+      vec2 f = fract(st);
+
+      vec4 p00 = texture2D(tex, (i + vec2(0.0, 0.0) + 0.5) / res);
+      vec4 p10 = texture2D(tex, (i + vec2(1.0, 0.0) + 0.5) / res);
+      vec4 p01 = texture2D(tex, (i + vec2(0.0, 1.0) + 0.5) / res);
+      vec4 p11 = texture2D(tex, (i + vec2(1.0, 1.0) + 0.5) / res);
+
+      return mix(mix(p00, p10, f.x), mix(p01, p11, f.x), f.y);
+  }
+`;
+
 const treeVertexShader = (shader: THREE.ShaderLibShader, heightMap: THREE.Texture, uTime: { value: number }) => {
   shader.uniforms.heightMap = { value: heightMap }
   shader.uniforms.uTime = uTime
   shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
-  shader.uniforms.uOffset = { value: OFFSET }
 
   shader.vertexShader = shader.vertexShader.replace(
     '#include <common>',
@@ -20,7 +34,7 @@ const treeVertexShader = (shader: THREE.ShaderLibShader, heightMap: THREE.Textur
     uniform sampler2D heightMap;
     uniform float uTime;
     uniform float uGridSize;
-    uniform float uOffset;`
+    ${BILINEAR_GLSL}`
   ).replace(
     '#include <begin_vertex>',
     `#include <begin_vertex>
@@ -28,11 +42,16 @@ const treeVertexShader = (shader: THREE.ShaderLibShader, heightMap: THREE.Textur
     vec4 instPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
     
     // Exact UV Mapping to match Terrain.tsx 101x101 DataTexture
-    vec2 worldUv = (instPos.xz + uOffset) / uGridSize;
+    // Plane is from -BOUNDARY to BOUNDARY. Total width is uGridSize (20.0)
+    float boundary = uGridSize * 0.5;
+    vec2 uv = (instPos.xz + boundary) / uGridSize;
+    // Invert Y UV to match Terrain.tsx PlaneGeometry mapping (Back/North is V=1)
+    uv.y = 1.0 - uv.y;
+    vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
     
-    // Sample height from heightMap (R channel)
-    float h = texture2D(heightMap, worldUv).r;
-    transformed.y += h;
+    // Sample height from heightMap (R channel) using bilinear interpolation
+    float h = bilinear(heightMap, sUv, vec2(101.0)).r;
+    transformed.y += h / instanceMatrix[1][1];
     
     // Wind sway (only for foliage, not trunk)
     float swayFactor = smoothstep(0.1, 1.0, position.y);
@@ -45,24 +64,25 @@ const treeVertexShader = (shader: THREE.ShaderLibShader, heightMap: THREE.Textur
 const pickingVertexShader = (shader: THREE.ShaderLibShader, heightMap: THREE.Texture) => {
   shader.uniforms.heightMap = { value: heightMap }
   shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
-  shader.uniforms.uOffset = { value: OFFSET }
 
   shader.vertexShader = shader.vertexShader.replace(
     '#include <common>',
     `#include <common>
     uniform sampler2D heightMap;
     uniform float uGridSize;
-    uniform float uOffset;
     attribute float aPickingId;
-    varying float vPickingId;`
+    varying float vPickingId;
+    ${BILINEAR_GLSL}`
   ).replace(
     '#include <begin_vertex>',
     `#include <begin_vertex>
     vPickingId = aPickingId;
     vec4 instPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-    vec2 worldUv = (instPos.xz + uOffset) / uGridSize;
-    float h = texture2D(heightMap, worldUv).r;
-    transformed.y += h;`
+    float boundary = uGridSize * 0.5;
+    vec2 uv = (instPos.xz + boundary) / uGridSize;
+    vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
+    float h = bilinear(heightMap, sUv, vec2(101.0)).r;
+    transformed.y += h / instanceMatrix[1][1];`
   )
   
   shader.fragmentShader = `

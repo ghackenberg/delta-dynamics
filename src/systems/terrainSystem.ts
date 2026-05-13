@@ -64,12 +64,26 @@ export const generateInitialTerrain = () => {
   for (let i = 0; i < GRID_SIZE; i++) {
     for (let j = 0; j < GRID_SIZE; j++) {
       updateCellWaterData(i, j, vertices, tempState, getRiverCarve, MANUAL_HEIGHTS)
-      const topLayer = vertices[i][j][vertices[i][j].length - 1]
+      
+      // Strict Humus Check: All 4 vertices of the cell must be HUMUS
+      let isHumusCell = true
+      for (let di = 0; di <= 1; di++) {
+        for (let dj = 0; dj <= 1; dj++) {
+          const v = vertices[i + di][j + dj]
+          if (v[v.length - 1].type !== 'HUMUS') {
+            isHumusCell = false
+            break
+          }
+        }
+        if (!isHumusCell) break
+      }
+
       const idx = j * GRID_SIZE + i
-      if (topLayer.type === 'HUMUS' && sWater[idx] <= 0 && Math.random() > 0.98) {
+      if (isHumusCell && sWater[idx] <= 0 && Math.random() > 0.98) {
         const treeTypes: BuildingType[] = ['TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH']
         const randomTree = treeTypes[Math.floor(Math.random() * treeTypes.length)]
         const id = Math.random().toString(36).substr(2, 9)
+        
         buildings.push({ 
           id, 
           pickingId: buildings.length + 1, // Simple sequential ID for initial trees
