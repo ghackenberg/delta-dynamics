@@ -273,6 +273,50 @@ export const Terrain = () => {
     `
   }
 
+  const onBeforeCompileWaterPicking = (shader: THREE.ShaderLibShader) => {
+    shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+    shader.uniforms.waterMap = uniforms.waterMap
+    shader.uniforms.uTime = uniforms.uTime
+    
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <common>',
+      `#include <common>
+      uniform sampler2D uTerrainSurface;
+      uniform sampler2D waterMap;
+      uniform float uTime;
+      varying float vDepth;
+      varying vec2 vGridUv;
+      ${BILINEAR_GLSL}`
+    ).replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+      vGridUv = uv;
+      vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
+      float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
+      float sw = bilinear(waterMap, uv, vec2(100.0)).r;
+      transformed.y = h + sw;
+      if (sw > 0.05) {
+        transformed.y += sin(uTime * 2.0 + (position.x + position.z) * 5.0) * 0.005;
+      }
+      vDepth = sw;`
+    )
+
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <common>',
+      `#include <common>
+      varying float vDepth;
+      varying vec2 vGridUv;`
+    ).replace(
+      '#include <color_fragment>',
+      `#include <color_fragment>
+      if (vDepth < 0.02) discard;
+      float x = (clamp(floor(vGridUv.x * 100.0), 0.0, 99.0) + 1.0) / 255.0;
+      float z = (clamp(floor((1.0 - vGridUv.y) * 100.0), 0.0, 99.0) + 1.0) / 255.0;
+      diffuseColor.rgb = vec3(x, z, 0.0);
+      diffuseColor.a = 1.0;`
+    )
+  }
+
   const terrainDepthMaterial = useMemo(() => {
     const mat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
     mat.onBeforeCompile = (shader) => {
@@ -407,6 +451,8 @@ export const Terrain = () => {
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.uniforms.waterMap = uniforms.waterMap
     shader.uniforms.uTime = uniforms.uTime
+    shader.uniforms.uHoveredCell = uniforms.uHoveredCell
+    shader.uniforms.uLayerHighlightColors = uniforms.uLayerHighlightColors
     
     shader.vertexShader = shader.vertexShader.replace(
       '#include <common>',
@@ -434,6 +480,8 @@ export const Terrain = () => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <common>',
       `#include <common>
+      uniform vec2 uHoveredCell;
+      uniform vec3 uLayerHighlightColors[6];
       varying float vDepth;
       varying vec2 vGridUv;`
     ).replace(
@@ -444,6 +492,13 @@ export const Terrain = () => {
       vec3 deepColor = vec3(0.02, 0.1, 0.3);
       vec3 waterColor = mix(shallowColor, deepColor, smoothstep(0.0, 0.5, vDepth));
       
+      // Hover Highlight
+      vec2 gridRes = vec2(100.0);
+      vec2 gridCell = floor(vGridUv * gridRes);
+      if (gridCell.x == uHoveredCell.x && (gridRes.y - 1.0 - gridCell.y) == uHoveredCell.y) {
+          waterColor = mix(waterColor, uLayerHighlightColors[5], 0.4);
+      }
+
       // Crisp shoreline contour near the discard threshold
       float shoreLine = 1.0 - smoothstep(0.02, 0.028, vDepth);
       waterColor = mix(waterColor, vec3(1.0), shoreLine * 0.9);
@@ -510,6 +565,16 @@ export const Terrain = () => {
         geometry={staticGeometry}
       >
         <meshBasicMaterial onBeforeCompile={onBeforeCompilePicking} />
+      </mesh>
+
+      {/* Water Picking Mesh */}
+      <mesh 
+        layers={PICKING_LAYER}
+        frustumCulled={false} 
+        position={[0, 0, 0]} 
+        geometry={staticGeometry}
+      >
+        <meshBasicMaterial onBeforeCompile={onBeforeCompileWaterPicking} />
       </mesh>
 
       <mesh 
