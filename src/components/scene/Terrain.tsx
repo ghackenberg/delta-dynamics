@@ -333,7 +333,7 @@ export const Terrain = () => {
           float totalW = fw00 + fw10 + fw01 + fw11;
           float finalSL = (totalW > 0.0) ? (p00.r * fw00 + p10.r * fw10 + p01.r * fw01 + p11.r * fw11) / totalW : h;
           
-          transformed.y = max(finalSL, h + 0.01);
+          transformed.y = finalSL;
       }
       
       vDepth = transformed.y - h;
@@ -468,7 +468,6 @@ export const Terrain = () => {
           float fw11 = f.x * f.y * w11;
           float tw = fw00 + fw10 + fw01 + fw11;
           if (tw > 0.0) wH = (p00.r * fw00 + p10.r * fw10 + p01.r * fw01 + p11.r * fw11) / tw;
-          wH = max(wH, h + 0.01);
       } else {
           wH = h - 0.05;
       }
@@ -622,7 +621,7 @@ export const Terrain = () => {
       
       if (totalW > 0.0001) {
           float finalSL = (p00.r * fw00 + p10.r * fw10 + p01.r * fw01 + p11.r * fw11) / totalW;
-          transformed.y = max(finalSL, h + 0.01);
+          transformed.y = finalSL;
       } else {
           transformed.y = h - 0.05; // Hide dry vertices
       }
