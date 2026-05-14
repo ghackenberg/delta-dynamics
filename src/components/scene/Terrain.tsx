@@ -89,21 +89,18 @@ export const Terrain = () => {
     return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].highlightColor))
   }, [])
 
-  const layerPorosities = useMemo(() => {
-    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
-    return new Float32Array(types.map(t => MATERIAL_PROPERTIES[t].porosity))
-  }, [])
-
   const layerPermeabilities = useMemo(() => {
     const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
     return new Float32Array(types.map(t => MATERIAL_PROPERTIES[t].permeability))
   }, [])
 
+  const aCap = useStore((state) => state.aCap)
+
   // Update terrain texture when vertices change
   useEffect(() => {
     const terrainVertices = TerrainManager.getInstance().getVertices()
-    gpuSim.updateTerrain(terrainVertices, rLevel)
-    gpuSim.updateMaterialProperties(layerPorosities, layerPermeabilities)
+    gpuSim.updateTerrain(terrainVertices, rLevel, aCap)
+    gpuSim.updateMaterialProperties(layerPermeabilities)
 
     // Also update rendering textures
     const lData = layerTex.image.data as Float32Array
@@ -135,22 +132,21 @@ export const Terrain = () => {
         
         const topLayer = layers[layers.length - 1]
         const topTypeIdx = LAYER_ID_MAP[topLayer.type]
-        const pavementLayer = layers.find(l => l.type === 'PAVEMENT')
-        const height = totalHeight - 5.0 // -5 is TERRAIN_BASE_Y
         
         const gridI = Math.min(i, GRID_SIZE - 1)
         const gridJ = Math.min(j, GRID_SIZE - 1)
         const gridIdx = gridJ * GRID_SIZE + gridI
+        const height = tHeight[gridIdx] || (totalHeight - 5.0)
         
         sData[texIdx] = height
         sData[texIdx + 1] = rLevel[gridIdx] || -99
         sData[texIdx + 2] = topTypeIdx
-        sData[texIdx + 3] = pavementLayer ? pavementLayer.thickness : 0.0
+        sData[texIdx + 3] = aCap[gridIdx] // Keep consistent with GPU surface.a
       }
     }
     layerTex.needsUpdate = true
     surfaceTex.needsUpdate = true
-  }, [gpuSim, terrainVersion, rLevel, layerTex, surfaceTex, layerPorosities, layerPermeabilities])
+  }, [gpuSim, terrainVersion, rLevel, aCap, tHeight, layerTex, surfaceTex, layerPermeabilities])
 
   const uniforms = useMemo(() => ({
     uTerrainLayers: { value: layerTex },

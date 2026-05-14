@@ -86,9 +86,15 @@ export const updateCellWaterData = (i: number, j: number, vertices: TerrainVerte
   const th = (h00 + h10 + h01 + h11) / 4
   state.tHeight![idx] = th
   
-  const layers = vertices[i][j]
-  let ac = 0
-  layers.forEach(l => { ac += l.thickness * MATERIAL_PROPERTIES[l.type].porosity })
+  let totalAc = 0
+  for (let di = 0; di <= 1; di++) {
+    for (let dj = 0; dj <= 1; dj++) {
+      let vAc = 0
+      vertices[i + di][j + dj].forEach(l => { vAc += l.thickness * MATERIAL_PROPERTIES[l.type].porosity })
+      totalAc += vAc
+    }
+  }
+  const ac = totalAc / 4
   state.aCap![idx] = ac
 
   const carveAtCenter = getRiverCarve(i + 0.5, j + 0.5)

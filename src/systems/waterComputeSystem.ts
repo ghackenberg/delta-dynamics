@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { waterFragmentShader } from './waterComputeShader'
 import { GRID_SIZE, MAX_GPU_LAYERS, LAYER_ID_MAP } from '../constants/gameConfig'
 import type { TerrainVertex } from '../types/game'
+import { getVertexTotalHeight } from '../utils/gameUtils'
 
 export class WaterComputeSystem {
     private renderer: THREE.WebGLRenderer
@@ -47,7 +48,6 @@ export class WaterComputeSystem {
                 uWater: { value: null },
                 uTerrainLayers: { value: this.terrainLayersTexture },
                 uTerrainSurface: { value: this.terrainSurfaceTexture },
-                uLayerPorosity: { value: new Float32Array(6) },
                 uLayerPermeability: { value: new Float32Array(6) },
                 uRain: { value: 0 },
                 uSeaLevel: { value: -0.8 },
@@ -72,8 +72,7 @@ export class WaterComputeSystem {
         this.pixelBuffer = new Float32Array(GRID_SIZE * GRID_SIZE * 4)
     }
 
-    public updateMaterialProperties(porosity: Float32Array, permeability: Float32Array) {
-        this.computeMaterial.uniforms.uLayerPorosity.value = porosity
+    public updateMaterialProperties(permeability: Float32Array) {
         this.computeMaterial.uniforms.uLayerPermeability.value = permeability
     }
 
@@ -111,7 +110,7 @@ export class WaterComputeSystem {
         tex.dispose()
     }
 
-    public updateTerrain(terrainVertices: TerrainVertex[][], rLevel: Float32Array) {
+    public updateTerrain(terrainVertices: TerrainVertex[][], rLevel: Float32Array, aCap: Float32Array) {
         const lData = this.terrainLayersTexture.image.data as Float32Array
         const sData = this.terrainSurfaceTexture.image.data as Float32Array
         
@@ -121,16 +120,23 @@ export class WaterComputeSystem {
             const rowOff = texJ * GRID_SIZE
             for (let i = 0; i < GRID_SIZE; i++) {
                 const texIdx = (rowOff + i) * 4
+                
+                // Average height of the 4 vertices defining the cell
+                const h00 = getVertexTotalHeight(terrainVertices[i][j])
+                const h10 = getVertexTotalHeight(terrainVertices[i + 1][j])
+                const h01 = getVertexTotalHeight(terrainVertices[i][j + 1])
+                const h11 = getVertexTotalHeight(terrainVertices[i + 1][j + 1])
+                const height = (h00 + h10 + h01 + h11) / 4
+                
+                // For layers, we still use the top-left vertex for now as it defines the cell's material properties
                 const layers = terrainVertices[i][j]
                 
-                let totalHeight = 0
                 for (let k = 0; k < MAX_GPU_LAYERS; k++) {
                     const layerIdx = (k * GRID_SIZE * GRID_SIZE + rowOff + i) * 4
                     if (k < layers.length) {
                         const l = layers[k]
                         lData[layerIdx] = LAYER_ID_MAP[l.type]
                         lData[layerIdx + 1] = l.thickness
-                        totalHeight += l.thickness
                     } else {
                         lData[layerIdx] = -1.0
                         lData[layerIdx + 1] = 0.0
@@ -139,15 +145,12 @@ export class WaterComputeSystem {
                 
                 const topLayer = layers[layers.length - 1]
                 const topTypeIdx = LAYER_ID_MAP[topLayer.type]
-                const pavementLayer = layers.find(l => l.type === 'PAVEMENT')
                 
-                const height = totalHeight - 5.0 // -5 is TERRAIN_BASE_Y
                 sData[texIdx] = height
-                // Note: rLevel index also needs to match logic grid
                 const gridIdx = j * GRID_SIZE + i
                 sData[texIdx + 1] = rLevel[gridIdx]
                 sData[texIdx + 2] = topTypeIdx
-                sData[texIdx + 3] = pavementLayer ? pavementLayer.thickness : 0.0
+                sData[texIdx + 3] = aCap[gridIdx] // Use alpha for aCap instead of pavement thickness
             }
         }
         this.terrainLayersTexture.needsUpdate = true
