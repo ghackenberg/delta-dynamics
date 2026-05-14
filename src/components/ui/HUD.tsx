@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useStore } from '../../hooks/useStore'
 import type { BuildingType } from '../../types/game'
+import { GRID_SIZE, TERRAIN_BASE_Y } from '../../constants/gameConfig'
 
 export const HUD = ({ onInitAI, onConsultAI }: { onInitAI: () => void, onConsultAI: () => void }) => {
   const resources = useStore((state) => state.resources)
@@ -23,6 +24,12 @@ export const HUD = ({ onInitAI, onConsultAI }: { onInitAI: () => void, onConsult
   const buildingsState = useStore((state) => state.buildings)
   const humans = useStore((state) => state.humans)
   const animals = useStore((state) => state.animals)
+
+  const terrainVertices = useStore((state) => state.terrainVertices)
+  const sWater = useStore((state) => state.sWater)
+  const gWater = useStore((state) => state.gWater)
+  const tHeight = useStore((state) => state.tHeight)
+  const aCap = useStore((state) => state.aCap)
 
   const hoveredEntity = useMemo(() => {
     if (!hoveredEntityId) return null
@@ -174,11 +181,107 @@ export const HUD = ({ onInitAI, onConsultAI }: { onInitAI: () => void, onConsult
         )}
 
         {hoveredCell && !hoveredEntity && (
-          <div className="bg-black/60 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl shadow-lg">
-            <span className="text-[10px] font-bold text-white/40 uppercase tracking-tighter mr-3">Grid Cell</span>
-            <span className="text-xs font-mono text-white/80">
-              X:{hoveredCell.x} Z:{hoveredCell.z}
-            </span>
+          <div className="bg-black/80 backdrop-blur-xl border border-white/20 p-6 rounded-2xl w-80 shadow-2xl animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10">
+              <span className="text-xs uppercase tracking-widest text-white/40 font-bold">Grid Cell</span>
+              <span className="text-sm font-mono text-white font-bold">
+                {hoveredCell.x} : {hoveredCell.z}
+              </span>
+            </div>
+
+            <div className="space-y-6">
+              {/* Overground Water */}
+              <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20">
+                <span className="text-xs text-blue-400 font-bold uppercase tracking-tight block mb-3">Overground Water</span>
+                {(() => {
+                  const idx = hoveredCell.z * GRID_SIZE + hoveredCell.x
+                  const depth = sWater[idx]
+                  const bottom = tHeight[idx]
+                  const top = bottom + depth
+                  return (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-white/30 uppercase font-bold">Thickness</span>
+                        <span className="text-blue-300 font-mono font-bold">{depth.toFixed(3)}m</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] text-white/30 uppercase font-bold">Top Edge</span>
+                        <span className="text-white font-mono font-bold">{top.toFixed(2)}m</span>
+                      </div>
+                      <div className="col-span-2 mt-1 pt-1 border-t border-white/5 flex justify-between items-baseline">
+                        <span className="text-[10px] text-white/30 uppercase font-bold">Bottom Edge</span>
+                        <span className="text-white font-mono font-bold">{bottom.toFixed(2)}m</span>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Underground Water */}
+              <div className="bg-cyan-500/10 rounded-xl p-4 border border-cyan-500/20">
+                <span className="text-xs text-cyan-400 font-bold uppercase tracking-tight block mb-3">Underground Water</span>
+                {(() => {
+                  const idx = hoveredCell.z * GRID_SIZE + hoveredCell.x
+                  const volume = gWater[idx]
+                  const cap = aCap[idx]
+                  const waterTable = tHeight[idx] - 0.5 + (cap > 0 ? (volume / cap) * 0.5 : 0)
+                  return (
+                    <div className="flex flex-col gap-3 text-sm">
+                      <div className="flex justify-between items-end">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-white/30 uppercase font-bold">Water Table</span>
+                          <span className="text-cyan-300 font-mono font-bold">{waterTable.toFixed(2)}m</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] text-white/30 uppercase font-bold">Saturation</span>
+                          <span className="text-cyan-400 font-bold bg-cyan-400/20 px-2 py-0.5 rounded text-xs">
+                            {((volume / (cap || 1)) * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-baseline pt-2 border-t border-white/5">
+                        <span className="text-[10px] text-white/30 uppercase font-bold">Volume / Cap</span>
+                        <span className="text-white/60 font-mono text-xs font-bold">{volume.toFixed(3)} / {cap.toFixed(2)}m</span>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Terrain Layers */}
+              <div className="space-y-4">
+                <span className="text-[11px] uppercase tracking-widest text-white/40 font-bold block">Terrain Layers (Top → Bottom)</span>
+                <div className="space-y-3">
+                  {(() => {
+                    const vertex = terrainVertices[hoveredCell.x][hoveredCell.z]
+                    let currentTop = vertex.reduce((sum, l) => sum + l.thickness, TERRAIN_BASE_Y)
+                    return [...vertex].reverse().map((layer, idx) => {
+                      const layerTop = currentTop
+                      const layerBottom = currentTop - layer.thickness
+                      currentTop = layerBottom
+                      return (
+                        <div key={idx} className="bg-white/5 rounded-lg p-3 border border-white/10 flex flex-col gap-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-white font-bold">{layer.type}</span>
+                            <span className="text-xs text-white/60 font-mono font-bold">{layer.thickness.toFixed(2)}m</span>
+                          </div>
+                          <div className="flex justify-between items-baseline text-[10px] font-mono">
+                            <div className="flex flex-col">
+                              <span className="text-white/20 uppercase font-bold mb-0.5">Top</span>
+                              <span className="text-white/40">{layerTop.toFixed(2)}m</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <span className="text-white/20 uppercase font-bold mb-0.5">Bottom</span>
+                              <span className="text-white/40">{layerBottom.toFixed(2)}m</span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  })()}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
