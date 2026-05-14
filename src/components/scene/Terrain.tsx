@@ -165,6 +165,10 @@ export const Terrain = () => {
     return geo
   }, [])
 
+  const waterGeometry = useMemo(() => {
+    return staticGeometry.clone().toNonIndexed()
+  }, [staticGeometry])
+
   const onBeforeCompileTerrain = (shader: THREE.ShaderLibShader) => {
     shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
@@ -291,14 +295,51 @@ export const Terrain = () => {
       '#include <begin_vertex>',
       `#include <begin_vertex>
       vGridUv = uv;
-      vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
-      float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
-      float sL = bilinear(waterMap, uv, vec2(100.0)).r;
-      float sw = bilinear(waterMap, uv, vec2(100.0)).b;
-      float waterLevel = mix(h, max(h, sL), clamp(sw * 100.0, 0.0, 1.0));
-      transformed.y = waterLevel;
-      vDepth = max(0.0, waterLevel - h);
-      if (vDepth > 0.05) {
+      vec2 gridRes = vec2(100.0);
+      vec2 texRes = vec2(101.0);
+      
+      vec2 sUv = (uv * 100.0 + 0.5) / texRes;
+      float h = bilinear(uTerrainSurface, sUv, texRes).r;
+      
+      vec2 st = uv * gridRes - 0.5;
+      vec2 i = floor(st);
+      vec2 f = fract(st);
+
+      vec4 p00 = texture2D(waterMap, (i + vec2(0.0, 0.0) + 0.5) / gridRes);
+      vec4 p10 = texture2D(waterMap, (i + vec2(1.0, 0.0) + 0.5) / gridRes);
+      vec4 p01 = texture2D(waterMap, (i + vec2(0.0, 1.0) + 0.5) / gridRes);
+      vec4 p11 = texture2D(waterMap, (i + vec2(1.0, 1.0) + 0.5) / gridRes);
+      
+      float maxWetL = -10.0;
+      bool anyWet = false;
+      if (p00.b > 0.001) { maxWetL = max(maxWetL, p00.r); anyWet = true; }
+      if (p10.b > 0.001) { maxWetL = max(maxWetL, p10.r); anyWet = true; }
+      if (p01.b > 0.001) { maxWetL = max(maxWetL, p01.r); anyWet = true; }
+      if (p11.b > 0.001) { maxWetL = max(maxWetL, p11.r); anyWet = true; }
+      
+      if (!anyWet) {
+          transformed.y = h - 0.05;
+      } else {
+          float w00 = (p00.b > 0.001 || p00.r < maxWetL) ? 1.0 : 0.0;
+          float w10 = (p10.b > 0.001 || p10.r < maxWetL) ? 1.0 : 0.0;
+          float w01 = (p01.b > 0.001 || p01.r < maxWetL) ? 1.0 : 0.0;
+          float w11 = (p11.b > 0.001 || p11.r < maxWetL) ? 1.0 : 0.0;
+          
+          float fw00 = (1.0 - f.x) * (1.0 - f.y) * w00;
+          float fw10 = f.x * (1.0 - f.y) * w10;
+          float fw01 = (1.0 - f.x) * f.y * w01;
+          float fw11 = f.x * f.y * w11;
+          
+          float totalW = fw00 + fw10 + fw01 + fw11;
+          float finalSL = (totalW > 0.0) ? (p00.r * fw00 + p10.r * fw10 + p01.r * fw01 + p11.r * fw11) / totalW : h;
+          
+          transformed.y = max(finalSL, h + 0.01);
+      }
+      
+      vDepth = transformed.y - h;
+      
+      float sw_interp = bilinear(waterMap, uv, gridRes).b;
+      if (sw_interp > 0.05) {
         transformed.y += sin(uTime * 2.0 + (position.x + position.z) * 5.0) * 0.005;
       }`
     )
@@ -306,12 +347,34 @@ export const Terrain = () => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <common>',
       `#include <common>
+      uniform sampler2D waterMap;
       varying float vDepth;
       varying vec2 vGridUv;`
     ).replace(
       '#include <color_fragment>',
       `#include <color_fragment>
-      if (vDepth < 0.002) discard;
+      // Hide if dry and no wet neighbors
+      vec2 gridRes = vec2(100.0);
+      if (texture2D(waterMap, vGridUv).b < 0.001) {
+          bool hasWetNeighbor = false;
+          vec2 texel = 1.0 / gridRes;
+          for (int y = -1; y <= 1; y++) {
+              for (int x = -1; x <= 1; x++) {
+                  if (x == 0 && y == 0) continue;
+                  vec2 nUv = vGridUv + vec2(float(x), float(y)) * texel;
+                  if (nUv.x >= 0.0 && nUv.x <= 1.0 && nUv.y >= 0.0 && nUv.y <= 1.0) {
+                      if (texture2D(waterMap, nUv).b > 0.001) {
+                          hasWetNeighbor = true;
+                          break;
+                      }
+                  }
+              }
+              if (hasWetNeighbor) break;
+          }
+          if (!hasWetNeighbor) discard;
+      }
+
+      // Continuous Depth Check (intersection with smooth terrain)
       float x = (clamp(floor(vGridUv.x * 100.0), 0.0, 99.0) + 1.0) / 255.0;
       float z = (clamp(floor((1.0 - vGridUv.y) * 100.0), 0.0, 99.0) + 1.0) / 255.0;
       diffuseColor.rgb = vec3(x, z, 0.0);
@@ -372,19 +435,53 @@ export const Terrain = () => {
       ${edge === 'W' ? 'vGridUv = vec2(0.0, 1.0 - edgeX);' : ''}
       ${edge === 'E' ? 'vGridUv = vec2(1.0, edgeX);' : ''}
 
-      vec2 sUv = (vGridUv * 100.0 + 0.5) / 101.0;
-      float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
-      float sL = bilinear(waterMap, vGridUv, vec2(100.0)).r;
-      float sw = bilinear(waterMap, vGridUv, vec2(100.0)).b;
+      vec2 gridRes = vec2(100.0);
+      vec2 texRes = vec2(101.0);
+      vec2 sUv = (vGridUv * 100.0 + 0.5) / texRes;
+      float h = bilinear(uTerrainSurface, sUv, texRes).r;
       
+      // Water-Aware Interpolation for Sides
+      vec2 st = vGridUv * gridRes - 0.5;
+      vec2 i = floor(st);
+      vec2 f = fract(st);
+      vec4 p00 = texture2D(waterMap, (i + vec2(0.0, 0.0) + 0.5) / gridRes);
+      vec4 p10 = texture2D(waterMap, (i + vec2(1.0, 0.0) + 0.5) / gridRes);
+      vec4 p01 = texture2D(waterMap, (i + vec2(0.0, 1.0) + 0.5) / gridRes);
+      vec4 p11 = texture2D(waterMap, (i + vec2(1.0, 1.0) + 0.5) / gridRes);
+      
+      float maxWetL = -10.0;
+      bool anyWet = false;
+      if (p00.b > 0.001) { maxWetL = max(maxWetL, p00.r); anyWet = true; }
+      if (p10.b > 0.001) { maxWetL = max(maxWetL, p10.r); anyWet = true; }
+      if (p01.b > 0.001) { maxWetL = max(maxWetL, p01.r); anyWet = true; }
+      if (p11.b > 0.001) { maxWetL = max(maxWetL, p11.r); anyWet = true; }
+      
+      float wH = h;
+      if (anyWet) {
+          float w00 = (p00.b > 0.001 || p00.r < maxWetL) ? 1.0 : 0.0;
+          float w10 = (p10.b > 0.001 || p10.r < maxWetL) ? 1.0 : 0.0;
+          float w01 = (p01.b > 0.001 || p01.r < maxWetL) ? 1.0 : 0.0;
+          float w11 = (p11.b > 0.001 || p11.r < maxWetL) ? 1.0 : 0.0;
+          float fw00 = (1.0 - f.x) * (1.0 - f.y) * w00;
+          float fw10 = f.x * (1.0 - f.y) * w10;
+          float fw01 = (1.0 - f.x) * f.y * w01;
+          float fw11 = f.x * f.y * w11;
+          float tw = fw00 + fw10 + fw01 + fw11;
+          if (tw > 0.0) wH = (p00.r * fw00 + p10.r * fw10 + p01.r * fw01 + p11.r * fw11) / tw;
+          wH = max(wH, h + 0.01);
+      } else {
+          wH = h - 0.05;
+      }
+
       vSurfaceY = h;
-      vWaterY = mix(h, max(h, sL), clamp(sw * 100.0, 0.0, 1.0));
+      vWaterY = wH;
 
       if (uv.y > 0.5) {
         transformed.y = ${isWater ? 'vWaterY' : 'vSurfaceY'};
       } else {
         transformed.y = ${isWater ? 'vSurfaceY' : '-5.0'};
       }
+      
       vWorldY = transformed.y;`
     )
 
@@ -405,10 +502,33 @@ export const Terrain = () => {
       '#include <color_fragment>',
       `#include <color_fragment>
       ${isWater ? `
-        if (vWaterY - vSurfaceY < 0.002) discard;
+        // Hide if dry and no wet neighbors
+        vec2 gridRes = vec2(100.0);
+        vec4 waterData = texture2D(waterMap, vGridUv);
+        if (waterData.b < 0.001) {
+            bool hasWetNeighbor = false;
+            vec2 texel = 1.0 / gridRes;
+            for (int y = -1; y <= 1; y++) {
+                for (int x = -1; x <= 1; x++) {
+                    if (x == 0 && y == 0) continue;
+                    vec2 nUv = vGridUv + vec2(float(x), float(y)) * texel;
+                    if (nUv.x >= 0.0 && nUv.x <= 1.0 && nUv.y >= 0.0 && nUv.y <= 1.0) {
+                        if (texture2D(waterMap, nUv).b > 0.001) {
+                            hasWetNeighbor = true;
+                            break;
+                        }
+                    }
+                }
+                if (hasWetNeighbor) break;
+            }
+            if (!hasWetNeighbor) discard;
+        }
+
+        // Deep/Shallow Color
+        float depth = vWaterY - vSurfaceY;
         vec3 shallowColor = vec3(0.2, 0.5, 0.8);
         vec3 deepColor = vec3(0.02, 0.1, 0.3);
-        diffuseColor.rgb = mix(shallowColor, deepColor, 0.5);
+        diffuseColor.rgb = mix(shallowColor, deepColor, smoothstep(0.0, 0.5, depth)) * 0.7;
       ` : `
         vec2 gridRes = vec2(100.0);
         vec2 texRes = vec2(101.0);
@@ -470,14 +590,47 @@ export const Terrain = () => {
       '#include <begin_vertex>',
       `#include <begin_vertex>
       vGridUv = uv;
-      vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
-      float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
-      float sL = bilinear(waterMap, uv, vec2(100.0)).r;
-      float sw = bilinear(waterMap, uv, vec2(100.0)).b;
-      float waterLevel = mix(h, max(h, sL), clamp(sw * 100.0, 0.0, 1.0));
-      transformed.y = waterLevel;
-      vDepth = max(0.0, waterLevel - h);
-      if (vDepth > 0.05) {
+      vec2 gridRes = vec2(100.0);
+      vec2 texRes = vec2(101.0);
+      
+      // 1. Smooth Terrain Height at this vertex
+      vec2 sUv = (uv * 100.0 + 0.5) / texRes;
+      float h = bilinear(uTerrainSurface, sUv, texRes).r;
+      
+      // 2. Wet-Neighbor-Only Level Averaging
+      vec2 st = uv * gridRes - 0.5;
+      vec2 i = floor(st);
+      vec2 f = fract(st);
+
+      vec4 p00 = texture2D(waterMap, (i + vec2(0.0, 0.0) + 0.5) / gridRes);
+      vec4 p10 = texture2D(waterMap, (i + vec2(1.0, 0.0) + 0.5) / gridRes);
+      vec4 p01 = texture2D(waterMap, (i + vec2(0.0, 1.0) + 0.5) / gridRes);
+      vec4 p11 = texture2D(waterMap, (i + vec2(1.0, 1.0) + 0.5) / gridRes);
+      
+      // Masks: 1.0 if wet, 0.0 if dry
+      float m00 = p00.b > 0.001 ? 1.0 : 0.0;
+      float m10 = p10.b > 0.001 ? 1.0 : 0.0;
+      float m01 = p01.b > 0.001 ? 1.0 : 0.0;
+      float m11 = p11.b > 0.001 ? 1.0 : 0.0;
+      
+      float fw00 = (1.0 - f.x) * (1.0 - f.y) * m00;
+      float fw10 = f.x * (1.0 - f.y) * m10;
+      float fw01 = (1.0 - f.x) * f.y * m01;
+      float fw11 = f.x * f.y * m11;
+      
+      float totalW = fw00 + fw10 + fw01 + fw11;
+      
+      if (totalW > 0.0001) {
+          float finalSL = (p00.r * fw00 + p10.r * fw10 + p01.r * fw01 + p11.r * fw11) / totalW;
+          transformed.y = max(finalSL, h + 0.01);
+      } else {
+          transformed.y = h - 0.05; // Hide dry vertices
+      }
+      
+      vDepth = transformed.y - h;
+      
+      float sw_interp = bilinear(waterMap, uv, gridRes).b;
+      if (sw_interp > 0.05) {
         transformed.y += sin(uTime * 2.0 + (position.x + position.z) * 5.0) * 0.005;
       }`
     )
@@ -485,6 +638,7 @@ export const Terrain = () => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <common>',
       `#include <common>
+      uniform sampler2D waterMap;
       uniform vec2 uHoveredCell;
       uniform vec3 uLayerHighlightColors[6];
       varying float vDepth;
@@ -492,29 +646,46 @@ export const Terrain = () => {
     ).replace(
       '#include <color_fragment>',
       `#include <color_fragment>
-      if (vDepth < 0.002) discard;
+      // Hide if dry and no wet neighbors
+      vec2 gridRes = vec2(100.0);
+      vec4 waterData = texture2D(waterMap, vGridUv);
+      float sw = waterData.b;
+      
+      if (sw < 0.001) {
+          bool hasWetNeighbor = false;
+          vec2 texel = 1.0 / gridRes;
+          if (texture2D(waterMap, vGridUv + vec2(texel.x, 0.0)).b > 0.001 ||
+              texture2D(waterMap, vGridUv - vec2(texel.x, 0.0)).b > 0.001 ||
+              texture2D(waterMap, vGridUv + vec2(0.0, texel.y)).b > 0.001 ||
+              texture2D(waterMap, vGridUv - vec2(0.0, texel.y)).b > 0.001) {
+              hasWetNeighbor = true;
+          }
+          if (!hasWetNeighbor) discard;
+      }
+
+      // Continuous Depth Check (intersection with smooth terrain)
       vec3 shallowColor = vec3(0.2, 0.5, 0.8);
       vec3 deepColor = vec3(0.02, 0.1, 0.3);
       vec3 waterColor = mix(shallowColor, deepColor, smoothstep(0.0, 0.5, vDepth));
       
       // Hover Highlight
-      vec2 gridRes = vec2(100.0);
       vec2 gridCell = floor(vGridUv * gridRes);
       if (gridCell.x == uHoveredCell.x && (gridRes.y - 1.0 - gridCell.y) == uHoveredCell.y) {
           waterColor = mix(waterColor, uLayerHighlightColors[5], 0.4);
       }
 
-      // Crisp shoreline contour near the discard threshold
-      float shoreLine = 1.0 - smoothstep(0.02, 0.028, vDepth);
-      waterColor = mix(waterColor, vec3(1.0), shoreLine * 0.9);
+      // Crisp shoreline contour at terrain intersection
+      float shoreLine = 1.0 - smoothstep(0.0, 0.03, vDepth);
+      waterColor = mix(waterColor, vec3(1.0), shoreLine * 0.8);
       
+      // Subtle flow/grid lines
       vec2 grid = fract(vGridUv * 100.0);
-      if (grid.x < 0.05 || grid.y < 0.05) {
-          waterColor += vec3(0.1);
+      if (grid.x < 0.02 || grid.y < 0.02) {
+          waterColor += vec3(0.05);
       }
       
       diffuseColor.rgb = waterColor;
-      diffuseColor.a = 1.0;`
+      diffuseColor.a = 0.85;`
     )
   }
 
@@ -577,18 +748,29 @@ export const Terrain = () => {
         layers-mask={1 << PICKING_LAYER}
         frustumCulled={false} 
         position={[0, 0, 0]} 
-        geometry={staticGeometry}
+        geometry={waterGeometry}
       >
-        <meshBasicMaterial onBeforeCompile={onBeforeCompileWaterPicking} />
+        <meshBasicMaterial 
+          onBeforeCompile={onBeforeCompileWaterPicking} 
+          polygonOffset
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
+        />
       </mesh>
 
       <mesh 
         receiveShadow 
         frustumCulled={false} 
         position={[0, 0, 0]} 
-        geometry={staticGeometry}
+        geometry={waterGeometry}
       >
-        <meshStandardMaterial flatShading onBeforeCompile={onBeforeCompileWater} />
+        <meshStandardMaterial 
+          flatShading 
+          onBeforeCompile={onBeforeCompileWater} 
+          polygonOffset
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
+        />
       </mesh>
 
       {/* Terrain Sides */}
