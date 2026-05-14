@@ -325,7 +325,9 @@ export const Terrain = () => {
       
       if (totalW > 0.0001) {
           float finalSL = (p00.a * fw00 + p10.a * fw10 + p01.a * fw01 + p11.a * fw11) / totalW;
-          transformed.y = finalSL;
+          // Cap extrapolated water to terrain height if the local cell is dry
+          float sw_local = bilinear(waterMap, vGridUv, gridRes).b;
+          transformed.y = sw_local > 0.001 ? finalSL : min(finalSL, h);
       } else {
           transformed.y = h - 0.05; // Hide dry vertices
       }
@@ -573,7 +575,9 @@ export const Terrain = () => {
       
       if (totalW > 0.0001) {
           float finalSL = (p00.a * fw00 + p10.a * fw10 + p01.a * fw01 + p11.a * fw11) / totalW;
-          transformed.y = finalSL;
+          // Cap extrapolated water to terrain height if the local cell is dry
+          float sw_local = bilinear(waterMap, vGridUv, gridRes).b;
+          transformed.y = sw_local > 0.001 ? finalSL : min(finalSL, h);
       } else {
           transformed.y = h - 0.05; // Hide dry vertices
       }
