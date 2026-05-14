@@ -97,7 +97,7 @@ void main() {
     // Infiltration (Using uLayerPermeability of top layer)
     int topIdx = int(surface.b + 0.5);
     float perm = uLayerPermeability[topIdx];
-    
+
     if (sw > 0.0 && gw < ac) {
         float amt = min(sw, min(ac - gw, 0.001 * perm / 0.2)); 
         sw -= amt;
@@ -111,6 +111,19 @@ void main() {
     }
 
     sL = th + sw;
-    gl_FragColor = vec4(sL, gw, sw, 1.0);
+
+    // Visual Extrapolation: Store sL in Alpha. For dry cells (or cells lower than neighbors), 
+    // use the level of the wettest neighbor to allow flat intersection and prevent flickering.
+    float visualSL = sw > 0.001 ? sL : -100.0;
+    for (int k = 0; k < 4; k++) {
+        vec2 nUv = uv + offsets[k];
+        if (nUv.x < 0.0 || nUv.x > 1.0 || nUv.y < 0.0 || nUv.y > 1.0) continue;
+        vec4 nWater = texture2D(uWater, nUv);
+        if (nWater.b > 0.001) {
+            visualSL = max(visualSL, nWater.r);
+        }
+    }
+
+    gl_FragColor = vec4(sL, gw, sw, visualSL);
 }
 `;
