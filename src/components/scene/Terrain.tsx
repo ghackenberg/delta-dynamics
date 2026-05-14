@@ -136,7 +136,7 @@ export const Terrain = () => {
         const gridI = Math.min(i, GRID_SIZE - 1)
         const gridJ = Math.min(j, GRID_SIZE - 1)
         const gridIdx = gridJ * GRID_SIZE + gridI
-        const height = tHeight[gridIdx] || (totalHeight - 5.0)
+        const height = totalHeight - 5.0 // Use actual vertex height (TERRAIN_BASE_Y = -5)
         
         sData[texIdx] = height
         sData[texIdx + 1] = rLevel[gridIdx] || -99
@@ -291,13 +291,15 @@ export const Terrain = () => {
       '#include <begin_vertex>',
       `#include <begin_vertex>
       vGridUv = uv;
+      vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
+      float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
       float sL = bilinear(waterMap, uv, vec2(100.0)).r;
       float sw = bilinear(waterMap, uv, vec2(100.0)).b;
-      transformed.y = sL;
-      if (sw > 0.05) {
+      transformed.y = max(h, sL);
+      vDepth = max(0.0, sL - h);
+      if (vDepth > 0.05) {
         transformed.y += sin(uTime * 2.0 + (position.x + position.z) * 5.0) * 0.005;
-      }
-      vDepth = sw;`
+      }`
     )
 
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -308,7 +310,7 @@ export const Terrain = () => {
     ).replace(
       '#include <color_fragment>',
       `#include <color_fragment>
-      if (vDepth < 0.02) discard;
+      if (vDepth < 0.002) discard;
       float x = (clamp(floor(vGridUv.x * 100.0), 0.0, 99.0) + 1.0) / 255.0;
       float z = (clamp(floor((1.0 - vGridUv.y) * 100.0), 0.0, 99.0) + 1.0) / 255.0;
       diffuseColor.rgb = vec3(x, z, 0.0);
@@ -375,7 +377,7 @@ export const Terrain = () => {
       float sw = bilinear(waterMap, vGridUv, vec2(100.0)).b;
       
       vSurfaceY = h;
-      vWaterY = sL;
+      vWaterY = max(h, sL);
 
       if (uv.y > 0.5) {
         transformed.y = ${isWater ? 'vWaterY' : 'vSurfaceY'};
@@ -402,7 +404,7 @@ export const Terrain = () => {
       '#include <color_fragment>',
       `#include <color_fragment>
       ${isWater ? `
-        if (vWaterY - vSurfaceY < 0.01) discard;
+        if (vWaterY - vSurfaceY < 0.002) discard;
         vec3 shallowColor = vec3(0.2, 0.5, 0.8);
         vec3 deepColor = vec3(0.02, 0.1, 0.3);
         diffuseColor.rgb = mix(shallowColor, deepColor, 0.5);
@@ -467,13 +469,15 @@ export const Terrain = () => {
       '#include <begin_vertex>',
       `#include <begin_vertex>
       vGridUv = uv;
+      vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
+      float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
       float sL = bilinear(waterMap, uv, vec2(100.0)).r;
       float sw = bilinear(waterMap, uv, vec2(100.0)).b;
-      transformed.y = sL;
-      if (sw > 0.05) {
+      transformed.y = max(h, sL);
+      vDepth = max(0.0, sL - h);
+      if (vDepth > 0.05) {
         transformed.y += sin(uTime * 2.0 + (position.x + position.z) * 5.0) * 0.005;
-      }
-      vDepth = sw;`
+      }`
     )
 
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -486,7 +490,7 @@ export const Terrain = () => {
     ).replace(
       '#include <color_fragment>',
       `#include <color_fragment>
-      if (vDepth < 0.02) discard;
+      if (vDepth < 0.002) discard;
       vec3 shallowColor = vec3(0.2, 0.5, 0.8);
       vec3 deepColor = vec3(0.02, 0.1, 0.3);
       vec3 waterColor = mix(shallowColor, deepColor, smoothstep(0.0, 0.5, vDepth));
@@ -579,7 +583,7 @@ export const Terrain = () => {
       <mesh 
         receiveShadow 
         frustumCulled={false} 
-        position={[0, 0.001, 0]} 
+        position={[0, 0, 0]} 
         geometry={staticGeometry}
       >
         <meshStandardMaterial flatShading onBeforeCompile={onBeforeCompileWater} />
