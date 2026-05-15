@@ -45,7 +45,9 @@ export const waterSideVertexChunks = {
         
         float wH = h - 0.05;
         if (tw > 0.0001) {
-            wH = (p00.a * fw00 + p10.a * fw10 + p01.a * fw01 + p11.a * fw11) / tw;
+            float finalSL = (p00.a * fw00 + p10.a * fw10 + p01.a * fw01 + p11.a * fw11) / tw;
+            float sw_local = bilinear(waterMap, vGridUv, gridRes).b;
+            wH = sw_local > 0.001 ? finalSL : min(finalSL, h);
         }
 
         vSurfaceY = h;

@@ -12,6 +12,10 @@ export const waterSideFragmentChunks = {
         vec4 waterData = texture2D(waterMap, vGridUv);
         if (waterData.a < -90.0) discard;
 
+        // Clip to water surface and terrain surface
+        if (vWorldY > vWaterY + 0.001) discard;
+        if (vWorldY < vSurfaceY - 0.001) discard;
+
         // Deep/Shallow Color
         float depth = vWaterY - vSurfaceY;
         vec3 shallowColor = vec3(0.2, 0.5, 0.8);
