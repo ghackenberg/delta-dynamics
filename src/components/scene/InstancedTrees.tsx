@@ -3,9 +3,11 @@ import { useMemo, useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
-import { TILE_SIZE, OFFSET } from '../../constants/gameConfig'
+import { treeVertexChunks } from '../../shaders/trees/tree.vert'
+import { pickingVertexChunks } from '../../shaders/trees/picking.vert'
+import { pickingFragmentShader } from '../../shaders/trees/picking.frag'
+import { GRID_SIZE, TILE_SIZE, OFFSET } from '../../constants/gameConfig'
 import { PICKING_LAYER } from './PickingSystem'
-import { treeVertexShader, pickingVertexShader } from '../../shaders/treeShader'
 
 const MAX_TREES = 5000
 
@@ -79,17 +81,29 @@ export const InstancedTrees = () => {
     const createMat = (color: string) => {
       const m = new THREE.MeshStandardMaterial({ color })
       m.onBeforeCompile = (shader) => {
-        treeVertexShader(shader, heightTexture, uTime)
+        shader.uniforms.heightMap = { value: heightTexture }
+        shader.uniforms.uTime = uTime
+        shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
+        shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${treeVertexChunks.common}`)
+        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${treeVertexChunks.begin}`)
       }
       return m
     }
     const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
     depth.onBeforeCompile = (shader) => {
-      treeVertexShader(shader, heightTexture, uTime)
+      shader.uniforms.heightMap = { value: heightTexture }
+      shader.uniforms.uTime = uTime
+      shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
+      shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${treeVertexChunks.common}`)
+      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${treeVertexChunks.begin}`)
     }
     const picking = new THREE.MeshBasicMaterial()
     picking.onBeforeCompile = (shader) => {
-      pickingVertexShader(shader, heightTexture)
+      shader.uniforms.heightMap = { value: heightTexture }
+      shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
+      shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${pickingVertexChunks.common}`)
+      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${pickingVertexChunks.begin}`)
+      shader.fragmentShader = pickingFragmentShader
     }
     return { conifer: createMat('#1a3317'), deciduous: createMat('#385e2c'), birch: createMat('#6e8b3d'), trunk: createMat('#3E2723'), depth, picking }
   }, [heightTexture, uTime])

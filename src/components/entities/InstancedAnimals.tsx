@@ -4,7 +4,10 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
 import { PICKING_LAYER } from '../scene/PickingSystem'
-import { animalVertexShader, pickingVertexShader } from '../../shaders/animalShader'
+import { animalVertexChunks } from '../../shaders/animals/animal.vert'
+import { pickingVertexChunks } from '../../shaders/animals/picking.vert'
+import { pickingFragmentShader } from '../../shaders/animals/picking.frag'
+import { GRID_SIZE, TILE_SIZE } from '../../constants/gameConfig'
 
 const MAX_ANIMALS = 500
 
@@ -87,14 +90,32 @@ export const InstancedAnimals = () => {
   const mats = useMemo(() => {
     const createMat = (color: string) => {
       const m = new THREE.MeshStandardMaterial({ color })
-      m.onBeforeCompile = (shader) => animalVertexShader(shader, heightTexture, uTime)
+      m.onBeforeCompile = (shader) => {
+        shader.uniforms.heightMap = { value: heightTexture }
+        shader.uniforms.uTime = uTime
+        shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
+        shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${animalVertexChunks.common}`)
+        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${animalVertexChunks.begin}`)
+      }
       return m
     }
     const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
-    depth.onBeforeCompile = (shader) => animalVertexShader(shader, heightTexture, uTime)
+    depth.onBeforeCompile = (shader) => {
+      shader.uniforms.heightMap = { value: heightTexture }
+      shader.uniforms.uTime = uTime
+      shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
+      shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${animalVertexChunks.common}`)
+      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${animalVertexChunks.begin}`)
+    }
     
     const picking = new THREE.MeshBasicMaterial()
-    picking.onBeforeCompile = (shader) => pickingVertexShader(shader, heightTexture)
+    picking.onBeforeCompile = (shader) => {
+      shader.uniforms.heightMap = { value: heightTexture }
+      shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
+      shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${pickingVertexChunks.common}`)
+      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${pickingVertexChunks.begin}`)
+      shader.fragmentShader = pickingFragmentShader
+    }
     
     return { deer: createMat('#8d5524'), wolf: createMat('#444444'), depth, picking }
   }, [heightTexture, uTime])

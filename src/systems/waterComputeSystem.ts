@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import { waterVertexShader } from '../shaders/waterCompute.vert'
-import { waterFragmentShader } from '../shaders/waterCompute.frag'
+import { waterVertexShader } from '../shaders/waterCompute/waterCompute.vert'
+import { waterFragmentShader } from '../shaders/waterCompute/waterCompute.frag'
 import { GRID_SIZE, MAX_GPU_LAYERS, LAYER_ID_MAP } from '../constants/gameConfig'
 import type { TerrainVertex } from '../types/game'
 import { getVertexTotalHeight } from '../utils/gameUtils'

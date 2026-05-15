@@ -8,18 +8,17 @@ import { WaterComputeSystem } from '../../systems/waterComputeSystem'
 import type { LayerType } from '../../types/game'
 import { TerrainManager } from '../../managers/TerrainManager'
 import { PICKING_LAYER } from './PickingSystem'
-import { 
-  terrainVertexShader, 
-  terrainFragmentShader, 
-  terrainPickingVertexShader, 
-  terrainPickingFragmentShader, 
-  waterPickingVertexShader, 
-  waterPickingFragmentShader, 
-  waterFragmentShader,
-  terrainDepthVertexShader, 
-  terrainSideVertexShader, 
-  terrainSideFragmentShader 
-} from '../../shaders/terrainShader'
+import { terrainVertexChunks } from '../../shaders/terrain/terrain.vert'
+import { terrainFragmentChunks } from '../../shaders/terrain/terrain.frag'
+import { pickingVertexChunks as terrainPickingVertexChunks } from '../../shaders/terrain/picking.vert'
+import { pickingFragmentShader as terrainPickingFragmentShader } from '../../shaders/terrain/picking.frag'
+import { waterPickingVertexChunks } from '../../shaders/terrain/waterPicking.vert'
+import { waterPickingFragmentChunks } from '../../shaders/terrain/waterPicking.frag'
+import { waterVertexChunks } from '../../shaders/terrain/water.vert'
+import { waterFragmentChunks } from '../../shaders/terrain/water.frag'
+import { terrainDepthVertexChunks } from '../../shaders/terrain/depth.vert'
+import { terrainSideVertexChunks } from '../../shaders/terrain/side.vert'
+import { terrainSideFragmentChunks } from '../../shaders/terrain/side.frag'
 
 export const Terrain = () => {
   const { gl } = useThree()
@@ -152,24 +151,45 @@ export const Terrain = () => {
   }, [staticGeometry])
 
   const onBeforeCompileTerrain = (shader: THREE.ShaderLibShader) => {
-    terrainVertexShader(shader, uniforms)
-    terrainFragmentShader(shader, uniforms)
+    shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
+    shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+    shader.uniforms.uTileSize = uniforms.uTileSize
+
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${terrainVertexChunks.common}`)
+    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${terrainVertexChunks.begin}`)
+    
+    shader.uniforms.uHoveredCell = uniforms.uHoveredCell
+    shader.uniforms.uLayerColors = uniforms.uLayerColors
+    shader.uniforms.uLayerHighlightColors = uniforms.uLayerHighlightColors
+    
+    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>\n${terrainFragmentChunks.common}`)
+    shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n${terrainFragmentChunks.color}`)
   }
 
   const onBeforeCompilePicking = (shader: THREE.ShaderLibShader) => {
-    terrainPickingVertexShader(shader, uniforms.uTerrainSurface)
-    terrainPickingFragmentShader(shader)
+    shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${terrainPickingVertexChunks.common}`)
+    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${terrainPickingVertexChunks.begin}`)
+    shader.fragmentShader = terrainPickingFragmentShader
   }
 
   const onBeforeCompileWaterPicking = (shader: THREE.ShaderLibShader) => {
-    waterPickingVertexShader(shader, uniforms)
-    waterPickingFragmentShader(shader, uniforms.waterMap)
+    shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+    shader.uniforms.waterMap = uniforms.waterMap
+    shader.uniforms.uTime = uniforms.uTime
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${waterPickingVertexChunks.common}`)
+    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${waterPickingVertexChunks.begin}`)
+    
+    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>\n${waterPickingFragmentChunks.common}`)
+    shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n${waterPickingFragmentChunks.color}`)
   }
 
   const terrainDepthMaterial = useMemo(() => {
     const mat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
     mat.onBeforeCompile = (shader) => {
-      terrainDepthVertexShader(shader, uniforms.uTerrainSurface)
+      shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+      shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${terrainDepthVertexChunks.common}`)
+      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${terrainDepthVertexChunks.begin}`)
     }
     return mat
   }, [uniforms.uTerrainSurface])
@@ -181,12 +201,31 @@ export const Terrain = () => {
   }, [])
 
   const onBeforeCompileSide = (shader: THREE.ShaderLibShader, edge: 'N' | 'S' | 'E' | 'W', isWater: boolean = false) => {
-    terrainSideVertexShader(shader, uniforms, edge)
-    terrainSideFragmentShader(shader, isWater, MAX_GPU_LAYERS)
+    shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
+    shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+    shader.uniforms.uLayerColors = uniforms.uLayerColors
+    shader.uniforms.waterMap = uniforms.waterMap
+    shader.uniforms.uTime = uniforms.uTime
+    
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${terrainSideVertexChunks.common}`)
+    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${terrainSideVertexChunks.begin(edge, isWater)}`)
+    
+    shader.fragmentShader = `#define MAX_LAYERS ${MAX_GPU_LAYERS}\n` + shader.fragmentShader.replace('#include <common>', `#include <common>\n${terrainSideFragmentChunks.common}`)
+    shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n${terrainSideFragmentChunks.color(isWater)}`)
   }
 
   const onBeforeCompileWater = (shader: THREE.ShaderLibShader) => {
-    waterFragmentShader(shader, uniforms)
+    shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
+    shader.uniforms.waterMap = uniforms.waterMap
+    shader.uniforms.uTime = uniforms.uTime
+    shader.uniforms.uHoveredCell = uniforms.uHoveredCell
+    shader.uniforms.uLayerHighlightColors = uniforms.uLayerHighlightColors
+    
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${waterVertexChunks.common}`)
+    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${waterVertexChunks.begin}`)
+    
+    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>\n${waterFragmentChunks.common}`)
+    shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n${waterFragmentChunks.color}`)
   }
 
   useFrame((state) => {
