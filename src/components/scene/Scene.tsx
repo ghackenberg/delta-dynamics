@@ -3,13 +3,15 @@ import { GameGrid } from './GameGrid'
 import { Terrain } from './Terrain'
 import { DayNightCycle } from './DayNightCycle'
 import { PickingSystem } from './PickingSystem'
+import { PerformanceSystem } from './PerformanceSystem'
 
 export const Scene = () => {
   return (
     <>
+      <PerformanceSystem />
       <PickingSystem />
       <DayNightCycle />
-      
+...
       <Terrain />
       <GameGrid />
       

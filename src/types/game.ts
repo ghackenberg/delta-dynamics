@@ -111,11 +111,14 @@ export interface GameState {
   selectedBuildingType: BuildingType
   hoveredCell: { x: number, z: number } | null
   hoveredEntityId: string | null
+  fps: number
+  fpsHistory: number[]
   tick: () => void
   simulateWater: () => void
   setSelectedBuildingType: (type: BuildingType) => void
   setHoveredCell: (cell: { x: number, z: number } | null) => void
   setHoveredEntityId: (id: string | null) => void
+  setFps: (fps: number) => void
   placeBuilding: (x: number, z: number, type: BuildingType) => void
   setAiStatus: (status: string) => void
   setAiLoading: (loading: boolean) => void

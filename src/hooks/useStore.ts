@@ -44,11 +44,16 @@ export const useStore = create<GameState>((set, get) => ({
   sWater: initialSWater, gWater: initialGWater, tHeight: initialTHeight, aCap: initialACap, rLevel: initialRLevel,
   heightTexture, waterTexture,
   humans: initialHumans,
-  animals: initialAnimals, aiStatus: 'Idle', isAiLoading: false, aiResponse: '', selectedBuildingType: 'HOUSE', hoveredCell: null, hoveredEntityId: null,
+  animals: initialAnimals, aiStatus: 'Idle', isAiLoading: false, aiResponse: '', selectedBuildingType: 'HOUSE', hoveredCell: null, hoveredEntityId: null, fps: 0, fpsHistory: [],
 
   simulateWater: () => {
     // Now handled on GPU in Terrain.tsx
   },
+
+  setFps: (fps) => set((state) => ({ 
+    fps, 
+    fpsHistory: [...state.fpsHistory.slice(-29), fps] 
+  })),
 
   tick: () => {
     const state = get()
