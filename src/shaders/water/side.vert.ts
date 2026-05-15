@@ -51,6 +51,13 @@ export const waterSideVertexChunks = {
         vSurfaceY = h;
         vWaterY = wH;
 
+        float sw_interp = bilinear(waterMap, vGridUv, gridRes).b;
+        if (sw_interp > 0.05) {
+            float worldX = (vGridUv.x - 0.5) * 20.0;
+            float worldZ = (0.5 - vGridUv.y) * 20.0;
+            vWaterY += sin(uTime * 2.0 + (worldX + worldZ) * 5.0) * 0.005;
+        }
+
         if (uv.y > 0.5) {
             transformed.y = vWaterY;
         } else {
