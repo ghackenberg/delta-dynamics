@@ -1,5 +1,6 @@
 import * as THREE from 'three'
-import { waterFragmentShader } from './waterComputeShader'
+import { waterVertexShader } from '../shaders/waterCompute.vert'
+import { waterFragmentShader } from '../shaders/waterCompute.frag'
 import { GRID_SIZE, MAX_GPU_LAYERS, LAYER_ID_MAP } from '../constants/gameConfig'
 import type { TerrainVertex } from '../types/game'
 import { getVertexTotalHeight } from '../utils/gameUtils'
@@ -54,13 +55,7 @@ export class WaterComputeSystem {
                 uTime: { value: 0 },
                 uResolution: { value: new THREE.Vector2(GRID_SIZE, GRID_SIZE) }
             },
-            vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                    vUv = uv;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
+            vertexShader: waterVertexShader,
             fragmentShader: `#define MAX_LAYERS ${MAX_GPU_LAYERS}\n${waterFragmentShader}`
         })
 
