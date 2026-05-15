@@ -135,30 +135,30 @@ export const InstancedTrees = () => {
 
   return (
     <group>
-      <instancedMesh ref={trunkRef} args={[trunkGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={mats.depth}>
+      <instancedMesh ref={trunkRef} args={[trunkGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={mats.depth} frustumCulled={false}>
         <primitive object={mats.trunk} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={coniferRef} args={[coniferGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={mats.depth}>
+      <instancedMesh ref={coniferRef} args={[coniferGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={mats.depth} frustumCulled={false}>
         <primitive object={mats.conifer} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={deciduousRef} args={[deciduousGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={mats.depth}>
+      <instancedMesh ref={deciduousRef} args={[deciduousGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={mats.depth} frustumCulled={false}>
         <primitive object={mats.deciduous} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={birchRef} args={[birchGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={mats.depth}>
+      <instancedMesh ref={birchRef} args={[birchGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={mats.depth} frustumCulled={false}>
         <primitive object={mats.birch} attach="material" />
       </instancedMesh>
 
       {/* Picking Meshes */}
-      <instancedMesh ref={trunkPickingRef} args={[trunkGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER}>
+      <instancedMesh ref={trunkPickingRef} args={[trunkGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
         <primitive object={mats.picking} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={coniferPickingRef} args={[coniferGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER}>
+      <instancedMesh ref={coniferPickingRef} args={[coniferGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
         <primitive object={mats.picking} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={deciduousPickingRef} args={[deciduousGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER}>
+      <instancedMesh ref={deciduousPickingRef} args={[deciduousGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
         <primitive object={mats.picking} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={birchPickingRef} args={[birchGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER}>
+      <instancedMesh ref={birchPickingRef} args={[birchGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
         <primitive object={mats.picking} attach="material" />
       </instancedMesh>
     </group>

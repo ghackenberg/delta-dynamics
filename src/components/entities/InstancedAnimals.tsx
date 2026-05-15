@@ -122,18 +122,18 @@ export const InstancedAnimals = () => {
 
   return (
     <group>
-      <instancedMesh ref={deerRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={mats.depth}>
+      <instancedMesh ref={deerRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={mats.depth} frustumCulled={false}>
         <primitive object={mats.deer} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={wolfRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={mats.depth}>
+      <instancedMesh ref={wolfRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={mats.depth} frustumCulled={false}>
         <primitive object={mats.wolf} attach="material" />
       </instancedMesh>
 
       {/* Picking Meshes */}
-      <instancedMesh ref={deerPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={1 << PICKING_LAYER}>
+      <instancedMesh ref={deerPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
         <primitive object={mats.picking} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={wolfPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={1 << PICKING_LAYER}>
+      <instancedMesh ref={wolfPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
         <primitive object={mats.picking} attach="material" />
       </instancedMesh>
     </group>
