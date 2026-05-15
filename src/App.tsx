@@ -13,7 +13,7 @@ function App() {
     <HUD onInitAI={initAI} onConsultAI={consultAdvisor}>
       <Canvas
         shadows={{ type: THREE.PCFShadowMap }}
-        camera={{ position: [15, 15, 15], fov: 45, near: 0.1, far: 1000 }}
+        camera={{ position: [20, 20, 20], fov: 45, near: 0.1, far: 1000 }}
       >
         <Scene />
       </Canvas>

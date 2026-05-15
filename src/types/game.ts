@@ -69,6 +69,8 @@ export interface TerrainConfig {
   visualRange: [number, number] // [minY, maxY] for rendering sides/depth
   generate: () => TerrainData
   getInflow?: (gameTime: number) => number
+  cameraPosition?: [number, number, number]
+  cameraTarget?: [number, number, number]
 }
 
 export interface GameResources {

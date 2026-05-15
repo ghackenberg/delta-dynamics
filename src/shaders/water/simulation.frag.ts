@@ -51,12 +51,12 @@ void main() {
         float nSL = nWater.r; // Now storing sL in R
         float sDiff = sL - nSL;
         if (sDiff > 0.0001) {
-            float f = sDiff * 0.15;
-            float clampedF = min(f, sw * 0.2);
+            float f = sDiff * 0.22;
+            float clampedF = min(f, sw * 0.3);
             sDelta -= clampedF;
         } else if (sDiff < -0.0001) {
-            float f = -sDiff * 0.15;
-            float clampedF = min(f, max(0.0, nWater.r - nSurface.r) * 0.2);
+            float f = -sDiff * 0.22;
+            float clampedF = min(f, max(0.0, nWater.r - nSurface.r) * 0.3);
             sDelta += clampedF;
         }
 
