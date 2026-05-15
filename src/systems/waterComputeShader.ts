@@ -116,16 +116,25 @@ void main() {
 
     sL = th + sw;
 
-    // Visual Extrapolation: Store sL in Alpha. For dry cells (or cells lower than neighbors), 
-    // use the level of the wettest neighbor to allow flat intersection and prevent flickering.
-    float visualSL = sw > 0.001 ? sL : -100.0;
+    // Visual Extrapolation: Store sL in Alpha. 
+    // Use weighted average by depth to prioritize deep pools over shallow rain.
+    float totalWeight = sw > 0.001 ? sw : 0.0;
+    float weightedSL = sw > 0.001 ? sL * sw : 0.0;
+
     for (int k = 0; k < 8; k++) {
         vec2 nUv = uv + offsets[k];
         if (nUv.x < 0.0 || nUv.x > 1.0 || nUv.y < 0.0 || nUv.y > 1.0) continue;
         vec4 nWater = texture2D(uWater, nUv);
+        // nWater.b is sw (surface water depth) from previous step
         if (nWater.b > 0.001) {
-            visualSL = max(visualSL, nWater.r);
+            weightedSL += nWater.r * nWater.b;
+            totalWeight += nWater.b;
         }
+    }
+    
+    float visualSL = -100.0;
+    if (totalWeight > 0.0) {
+        visualSL = weightedSL / totalWeight;
     }
 
     gl_FragColor = vec4(sL, gw, sw, visualSL);
