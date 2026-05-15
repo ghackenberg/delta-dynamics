@@ -1,4 +1,4 @@
-export const terrainFragmentChunks = {
+export const terrainSurfaceFragmentChunks = {
     common: `
         uniform sampler2D uTerrainSurface;
         uniform vec2 uHoveredCell;

@@ -1,6 +1,6 @@
 import { BILINEAR_GLSL } from '../shared/bilinear'
 
-export const terrainVertexChunks = {
+export const terrainSurfaceVertexChunks = {
     common: `
         uniform sampler2D uTerrainLayers;
         uniform sampler2D uTerrainSurface;

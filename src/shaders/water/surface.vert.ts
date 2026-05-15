@@ -1,6 +1,6 @@
 import { BILINEAR_GLSL } from '../shared/bilinear'
 
-export const waterVertexChunks = {
+export const waterSurfaceVertexChunks = {
     common: `
         uniform sampler2D uTerrainSurface;
         uniform sampler2D waterMap;

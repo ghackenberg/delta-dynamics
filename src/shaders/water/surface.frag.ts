@@ -1,4 +1,4 @@
-export const waterFragmentChunks = {
+export const waterSurfaceFragmentChunks = {
     common: `
         uniform sampler2D waterMap;
         uniform vec2 uHoveredCell;
