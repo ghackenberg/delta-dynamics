@@ -44,7 +44,20 @@ export const useStore = create<GameState>((set, get) => ({
   sWater: initialSWater, gWater: initialGWater, tHeight: initialTHeight, aCap: initialACap, rLevel: initialRLevel,
   heightTexture, waterTexture,
   humans: initialHumans,
-  animals: initialAnimals, aiStatus: 'Idle', isAiLoading: false, aiResponse: '', selectedBuildingType: 'HOUSE', hoveredCell: null, hoveredEntityId: null, fps: 0, fpsHistory: [],
+  animals: initialAnimals, aiStatus: 'Idle', isAiLoading: false, aiResponse: '', 
+  mode: 'PLAY',
+  selectedBuildingType: 'HOUSE', 
+  editorLayerType: 'HUMUS',
+  editorBrushSize: 5,
+  editorBrushStrength: 0.5,
+  isEditorInteracting: false,
+  isCtrlPressed: false,
+  hoveredCell: null, hoveredEntityId: null, fps: 0, fpsHistory: [],
+
+  setMode: (mode) => set({ mode }),
+  setEditorLayerType: (type) => set({ editorLayerType: type }),
+  setEditorBrushSize: (size) => set({ editorBrushSize: size }),
+  setEditorBrushStrength: (strength) => set({ editorBrushStrength: strength }),
 
   simulateWater: () => {
     // Now handled on GPU in Terrain.tsx
@@ -157,6 +170,36 @@ export const useStore = create<GameState>((set, get) => ({
     
     return { buildings, occupancyGrid: newO, humans, resources: deductBuildingCost(type, state.resources) }
   }),
+  paintTerrain: (xIndex, zIndex, isErase) => set((state) => {
+    const changed = TerrainManager.getInstance().paintArea(
+      xIndex, zIndex,
+      state.editorBrushSize,
+      state.editorLayerType,
+      isErase ? -state.editorBrushStrength : state.editorBrushStrength,
+      state
+    )
+    if (changed) {
+      return { terrainVersion: state.terrainVersion + 1 }
+    }
+    return state
+  }),
+  resetTerrain: () => {
+    const { vertices, sWater, gWater, tHeight, aCap, rLevel, buildings, occupancyGrid } = generateInitialTerrain('flat')
+    TerrainManager.getInstance().initialize(vertices)
+    set((state) => ({
+      terrainVertices: vertices,
+      sWater,
+      gWater,
+      tHeight,
+      aCap,
+      rLevel,
+      buildings,
+      occupancyGrid,
+      terrainVersion: state.terrainVersion + 1,
+      humans: [], // Clear humans and animals on reset if desired, or keep them
+      animals: []
+    }))
+  },
   setAiStatus: (status) => set({ aiStatus: status }),
   setAiLoading: (loading) => set({ isAiLoading: loading }),
   setAiResponse: (response) => set({ aiResponse: response }),

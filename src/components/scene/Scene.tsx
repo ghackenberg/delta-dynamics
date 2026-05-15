@@ -12,6 +12,7 @@ import { GRID_SIZE, TILE_SIZE } from '../../constants/gameConfig'
 
 export const Scene = () => {
   const activeTerrainId = useStore((state) => state.activeTerrainId)
+  const isEditorInteracting = useStore((state) => state.isEditorInteracting)
   const controlsRef = useRef<MapControlsImpl>(null)
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export const Scene = () => {
       <MapControls 
         ref={controlsRef}
         makeDefault 
+        enabled={!isEditorInteracting}
         minDistance={5} 
         maxDistance={50} 
         maxPolarAngle={Math.PI / 2.1} 

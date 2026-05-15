@@ -36,8 +36,35 @@ export const Terrain = () => {
   const activeTerrainId = useStore((state) => state.activeTerrainId)
 
   const placeBuilding = useStore((state) => state.placeBuilding)
+  const paintTerrain = useStore((state) => state.paintTerrain)
+  const mode = useStore((state) => state.mode)
   const selectedBuildingType = useStore((state) => state.selectedBuildingType)
   const hoveredCell = useStore((state) => state.hoveredCell)
+  const isCtrlPressed = useStore((state) => state.isCtrlPressed)
+
+  const [isPainting, setIsPainting] = useState(false)
+  const [isErasing, setIsErasing] = useState(false)
+
+  // Sync with global store for camera control management
+  useEffect(() => {
+    useStore.setState({ isEditorInteracting: isCtrlPressed && (isPainting || isErasing) })
+  }, [isPainting, isErasing, isCtrlPressed])
+
+  // Continuous painting in editor mode
+  useFrame(() => {
+    if (mode === 'EDITOR' && isCtrlPressed && (isPainting || isErasing) && hoveredCell) {
+      paintTerrain(hoveredCell.x, hoveredCell.z, isErasing)
+    }
+  })
+
+  // Disable context menu for right-click erasing
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      if (mode === 'EDITOR') e.preventDefault()
+    }
+    window.addEventListener('contextmenu', handleContextMenu)
+    return () => window.removeEventListener('contextmenu', handleContextMenu)
+  }, [mode])
 
   const terrainConfig = useMemo(() => getTerrainById(activeTerrainId), [activeTerrainId])
 
@@ -281,8 +308,25 @@ export const Terrain = () => {
   return (
     <group 
       onPointerDown={(e) => {
-        if (e.button === 0 && hoveredCell) {
-            placeBuilding(hoveredCell.x, hoveredCell.z, selectedBuildingType)
+        if (mode === 'PLAY') {
+          if (e.button === 0 && hoveredCell) {
+              placeBuilding(hoveredCell.x, hoveredCell.z, selectedBuildingType)
+          }
+        } else if (mode === 'EDITOR') {
+          if (e.button === 0) setIsPainting(true)
+          if (e.button === 2) setIsErasing(true)
+        }
+      }}
+      onPointerUp={(e) => {
+        if (mode === 'EDITOR') {
+          if (e.button === 0) setIsPainting(false)
+          if (e.button === 2) setIsErasing(false)
+        }
+      }}
+      onPointerLeave={() => {
+        if (mode === 'EDITOR') {
+          setIsPainting(false)
+          setIsErasing(false)
         }
       }}
     >

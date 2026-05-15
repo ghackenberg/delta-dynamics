@@ -80,6 +80,8 @@ export interface GameResources {
   gold: number
 }
 
+export type GameMode = 'PLAY' | 'EDITOR'
+
 export interface GameState {
   gameTime: number 
   day: number
@@ -110,22 +112,34 @@ export interface GameState {
   isAiLoading: boolean
   aiResponse: string
   rainIntensity: number 
+  mode: GameMode
   selectedBuildingType: BuildingType
+  editorLayerType: LayerType
+  editorBrushSize: number
+  editorBrushStrength: number
+  isEditorInteracting: boolean
+  isCtrlPressed: boolean
   hoveredCell: { x: number, z: number } | null
   hoveredEntityId: string | null
   fps: number
   fpsHistory: number[]
   tick: () => void
   simulateWater: () => void
+  setMode: (mode: GameMode) => void
   setSelectedBuildingType: (type: BuildingType) => void
+  setEditorLayerType: (type: LayerType) => void
+  setEditorBrushSize: (size: number) => void
+  setEditorBrushStrength: (strength: number) => void
   setHoveredCell: (cell: { x: number, z: number } | null) => void
   setHoveredEntityId: (id: string | null) => void
   setFps: (fps: number) => void
   placeBuilding: (x: number, z: number, type: BuildingType) => void
+  paintTerrain: (x: number, z: number, isErase: boolean) => void
   setAiStatus: (status: string) => void
   setAiLoading: (loading: boolean) => void
   setAiResponse: (response: string) => void
   setRainIntensity: (intensity: number) => void
   spawnHuman: (homeId: string) => void
   spawnAnimal: (type: AnimalType, x?: number, z?: number) => void
+  resetTerrain: () => void
 }

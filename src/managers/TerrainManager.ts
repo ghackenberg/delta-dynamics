@@ -130,13 +130,92 @@ export class TerrainManager {
     }
 
     if (changed) {
-      for (let i = Math.max(0, xIdx - 1); i <= Math.min(GRID_SIZE - 1, xIdx + width); i++) {
-        for (let j = Math.max(0, zIdx - 1); j <= Math.min(GRID_SIZE - 1, zIdx + height); j++) {
-          updateCellWaterData(i, j, this.vertices, state)
+      this.updateSimulationBuffers(xIdx, zIdx, width, height, state)
+    }
+
+    return changed
+  }
+
+  public paintArea(
+    xIdx: number,
+    zIdx: number,
+    radius: number,
+    type: LayerType,
+    strength: number,
+    state: Partial<GameState>
+  ): boolean {
+    let changed = false
+    const sigma = radius / 2
+    const sigma2 = 2 * sigma * sigma
+
+    const startI = Math.max(0, xIdx - radius)
+    const endI = Math.min(GRID_SIZE, xIdx + radius)
+    const startJ = Math.max(0, zIdx - radius)
+    const endJ = Math.min(GRID_SIZE, zIdx + radius)
+
+    for (let i = startI; i <= endI; i++) {
+      for (let j = startJ; j <= endJ; j++) {
+        const dx = i - xIdx
+        const dz = j - zIdx
+        const dist2 = dx * dx + dz * dz
+        if (dist2 > radius * radius) continue
+
+        const weight = Math.exp(-dist2 / sigma2)
+        const amount = strength * weight
+        if (Math.abs(amount) < 0.001) continue
+
+        const vertex = this.vertices[i][j]
+        const last = vertex[vertex.length - 1]
+
+        if (strength > 0) {
+          // Paint
+          if (last?.type === type) {
+            last.thickness += amount
+          } else {
+            vertex.push({ type, thickness: amount })
+          }
+          changed = true
+        } else {
+          // Erase
+          let eraseAmount = Math.abs(amount)
+          while (eraseAmount > 0 && vertex.length > 0) {
+            const currentLast = vertex[vertex.length - 1]
+            if (currentLast.thickness > eraseAmount) {
+              currentLast.thickness -= eraseAmount
+              eraseAmount = 0
+            } else {
+              eraseAmount -= currentLast.thickness
+              if (vertex.length > 1) {
+                vertex.pop()
+              } else {
+                currentLast.thickness = 0
+                eraseAmount = 0
+              }
+            }
+          }
+          changed = true
         }
       }
     }
 
+    if (changed) {
+      this.updateSimulationBuffers(startI, startJ, endI - startI, endJ - startJ, state)
+    }
+
     return changed
+  }
+
+  private updateSimulationBuffers(
+    xIdx: number,
+    zIdx: number,
+    width: number,
+    height: number,
+    state: Partial<GameState>
+  ) {
+    for (let i = Math.max(0, xIdx - 1); i <= Math.min(GRID_SIZE - 1, xIdx + width + 1); i++) {
+      for (let j = Math.max(0, zIdx - 1); j <= Math.min(GRID_SIZE - 1, zIdx + height + 1); j++) {
+        updateCellWaterData(i, j, this.vertices, state)
+      }
+    }
   }
 }
