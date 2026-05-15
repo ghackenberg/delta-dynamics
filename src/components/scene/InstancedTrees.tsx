@@ -3,7 +3,7 @@ import { useMemo, useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
-import { treeVertexChunks } from '../../shaders/trees/tree.vert'
+import { surfaceVertexChunks } from '../../shaders/trees/surface.vert'
 import { pickingVertexChunks } from '../../shaders/trees/picking.vert'
 import { pickingFragmentShader } from '../../shaders/trees/picking.frag'
 import { GRID_SIZE, TILE_SIZE, OFFSET } from '../../constants/gameConfig'
@@ -84,8 +84,8 @@ export const InstancedTrees = () => {
         shader.uniforms.heightMap = { value: heightTexture }
         shader.uniforms.uTime = uTime
         shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
-        shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${treeVertexChunks.common}`)
-        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${treeVertexChunks.begin}`)
+        shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${surfaceVertexChunks.common}`)
+        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${surfaceVertexChunks.begin}`)
       }
       return m
     }
@@ -94,8 +94,8 @@ export const InstancedTrees = () => {
       shader.uniforms.heightMap = { value: heightTexture }
       shader.uniforms.uTime = uTime
       shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
-      shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${treeVertexChunks.common}`)
-      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${treeVertexChunks.begin}`)
+      shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${surfaceVertexChunks.common}`)
+      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${surfaceVertexChunks.begin}`)
     }
     const picking = new THREE.MeshBasicMaterial()
     picking.onBeforeCompile = (shader) => {

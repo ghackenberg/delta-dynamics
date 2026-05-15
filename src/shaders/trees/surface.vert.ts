@@ -1,38 +1,32 @@
 import { BILINEAR_GLSL } from '../shared/bilinear'
 
-export const animalVertexChunks = {
+export const surfaceVertexChunks = {
     common: `
         uniform sampler2D heightMap;
         uniform float uTime;
         uniform float uGridSize;
-        attribute float aRandom;
-        varying float vRandom;
         ${BILINEAR_GLSL}
     `,
     begin: `
-        vRandom = aRandom;
+        // Instance world position (xz only)
         vec4 instPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
         
         // Exact UV Mapping to match Terrain.tsx 101x101 DataTexture
+        // Plane is from -BOUNDARY to BOUNDARY. Total width is uGridSize (20.0)
         float boundary = uGridSize * 0.5;
         vec2 uv = (instPos.xz + boundary) / uGridSize;
         // Invert Y UV to match Terrain.tsx PlaneGeometry mapping (Back/North is V=1)
         uv.y = 1.0 - uv.y;
         vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
+        
+        // Sample height from heightMap (R channel) using bilinear interpolation
         float h = bilinear(heightMap, sUv, vec2(101.0)).r;
-        
         transformed.y += h / instanceMatrix[1][1];
-
-        // Procedural animation (Hopping/Waddling)
-        float speed = 8.0 + aRandom * 4.0;
-        float hop = abs(sin(uTime * speed + aRandom * 10.0)) * 0.05;
-        transformed.y += hop;
         
-        // Slight side-to-side tilt
-        float tilt = sin(uTime * speed * 0.5 + aRandom * 10.0) * 0.1;
-        float cosT = cos(tilt);
-        float sinT = sin(tilt);
-        mat2 rot = mat2(cosT, -sinT, sinT, cosT);
-        transformed.xy = rot * transformed.xy;
+        // Wind sway (only for foliage, not trunk)
+        float swayFactor = smoothstep(0.1, 1.0, position.y);
+        float sway = sin(uTime * 1.5 + instPos.x * 5.0 + instPos.z * 3.0) * 0.04 * swayFactor;
+        transformed.x += sway;
+        transformed.z += sway * 0.5;
     `
 }
