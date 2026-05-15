@@ -25,7 +25,7 @@ export const terrainSideVertexChunks = {
         if (uv.y > 0.5) {
             transformed.y = vSurfaceY;
         } else {
-            transformed.y = -5.0;
+            transformed.y = uVisualRange.x;
         }
         vWorldY = transformed.y;
     `

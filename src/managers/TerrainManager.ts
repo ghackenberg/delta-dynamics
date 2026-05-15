@@ -1,8 +1,7 @@
-import { GRID_SIZE, MANUAL_HEIGHTS } from '../constants/gameConfig'
+import { GRID_SIZE } from '../constants/gameConfig'
 import type { TerrainVertex, LayerType, GameState } from '../types/game'
 import { getVertexTotalHeight } from '../utils/gameUtils'
 import { updateCellWaterData } from '../systems/waterSystem'
-import { getRiverCarve } from '../systems/terrainSystem'
 
 export class TerrainManager {
   private static instance: TerrainManager
@@ -87,7 +86,7 @@ export class TerrainManager {
     if (changed) {
       for (let i = Math.max(0, xIdx - 1); i <= Math.min(GRID_SIZE - 1, xIdx + 1); i++) {
         for (let j = Math.max(0, zIdx - 1); j <= Math.min(GRID_SIZE - 1, zIdx + 1); j++) {
-          updateCellWaterData(i, j, this.vertices, state, getRiverCarve, MANUAL_HEIGHTS)
+          updateCellWaterData(i, j, this.vertices, state)
         }
       }
     }
@@ -133,7 +132,7 @@ export class TerrainManager {
     if (changed) {
       for (let i = Math.max(0, xIdx - 1); i <= Math.min(GRID_SIZE - 1, xIdx + width); i++) {
         for (let j = Math.max(0, zIdx - 1); j <= Math.min(GRID_SIZE - 1, zIdx + height); j++) {
-          updateCellWaterData(i, j, this.vertices, state, getRiverCarve, MANUAL_HEIGHTS)
+          updateCellWaterData(i, j, this.vertices, state)
         }
       }
     }

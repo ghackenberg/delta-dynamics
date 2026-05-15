@@ -5,6 +5,7 @@ uniform sampler2DArray uTerrainLayers;
 uniform sampler2D uTerrainSurface; // R: height, G: rLevel, B: topType, A: aCap
 uniform float uLayerPermeability[6];
 uniform float uRain;
+uniform float uInflow;
 uniform float uSeaLevel;
 uniform float uTime;
 uniform vec2 uResolution;
@@ -77,26 +78,26 @@ void main() {
     sw += uRain * 0.0005;
 
     // Boundary / Sea Level
-    if (rl < -90.0 && th < -0.5) {
-        if (uv.x < texel.x || uv.x > 1.0 - texel.x || uv.y < texel.y || uv.y > 1.0 - texel.y) {
-            sDelta += (uSeaLevel - sL) * 0.025;
+    if (uv.x < texel.x || uv.x > 1.0 - texel.x || uv.y < texel.y || uv.y > 1.0 - texel.y) {
+        // If below sea level, stabilize to sea level
+        if (th < uSeaLevel) {
+            sDelta += (uSeaLevel - sL) * 0.05;
+        } 
+        // If above sea level, allow water to flow off the map if there is a depth
+        else if (sw > 0.001) {
+            sDelta -= sw * 0.1; // "Open boundary" drain
         }
+    }
+
+    // Source logic
+    if (rl > 0.5 && rl < 1.5) { // rl == 1.0 is Source
+        sw += uInflow;
+        gw = ac; // Keep ground saturated at sources
     }
 
     // Apply deltas
     sw = max(0.0, sw + sDelta);
     gw = max(0.0, gw + gDelta);
-
-    // River / Source logic (simulated by rl)
-    if (rl > -90.0) {
-        if (uv.x < 0.05) { 
-            sw = max(0.0, rl - th); 
-            gw = ac; 
-        } else if (uv.x > 0.95) {
-            sw = 0.0;
-            gw = 0.0;
-        }
-    }
 
     // Infiltration (Using uLayerPermeability of top layer)
     int topIdx = int(surface.b + 0.5);

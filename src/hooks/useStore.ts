@@ -19,7 +19,8 @@ const createDataTexture = () => {
 const heightTexture = createDataTexture()
 const waterTexture = createDataTexture()
 
-const { vertices: initialVertices, sWater: initialSWater, gWater: initialGWater, tHeight: initialTHeight, aCap: initialACap, rLevel: initialRLevel, buildings: initialBuildings, occupancyGrid: initialOccupancy } = generateInitialTerrain()
+const activeTerrainId = 'river-lake'
+const { vertices: initialVertices, sWater: initialSWater, gWater: initialGWater, tHeight: initialTHeight, aCap: initialACap, rLevel: initialRLevel, buildings: initialBuildings, occupancyGrid: initialOccupancy } = generateInitialTerrain(activeTerrainId)
 
 TerrainManager.getInstance().initialize(initialVertices)
 
@@ -39,7 +40,7 @@ animalConfigs.forEach((config, idx) => {
 export const useStore = create<GameState>((set, get) => ({
   gameTime: 480, day: 1, isNight: false, simulationSpeed: 50, rainIntensity: 0,
   resources: { ...INITIAL_RESOURCES }, rates: { food: 0, wood: 0, stone: 0, gold: 0 },
-  buildings: initialBuildings, occupancyGrid: initialOccupancy, terrainVertices: initialVertices, terrainVersion: 0,
+  buildings: initialBuildings, occupancyGrid: initialOccupancy, terrainVertices: initialVertices, terrainVersion: 0, activeTerrainId: 'river-lake',
   sWater: initialSWater, gWater: initialGWater, tHeight: initialTHeight, aCap: initialACap, rLevel: initialRLevel,
   heightTexture, waterTexture,
   humans: initialHumans,

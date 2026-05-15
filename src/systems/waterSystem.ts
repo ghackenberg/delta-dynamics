@@ -51,6 +51,7 @@ export class WaterComputeSystem {
                 uTerrainSurface: { value: this.terrainSurfaceTexture },
                 uLayerPermeability: { value: new Float32Array(6) },
                 uRain: { value: 0 },
+                uInflow: { value: 0 },
                 uSeaLevel: { value: -0.8 },
                 uTime: { value: 0 },
                 uResolution: { value: new THREE.Vector2(GRID_SIZE, GRID_SIZE) }
@@ -152,9 +153,10 @@ export class WaterComputeSystem {
         this.terrainSurfaceTexture.needsUpdate = true
     }
 
-    public step(rain: number, seaLevel: number, time: number) {
+    public step(rain: number, inflow: number, seaLevel: number, time: number) {
         this.computeMaterial.uniforms.uWater.value = this.renderTargetA.texture
         this.computeMaterial.uniforms.uRain.value = rain
+        this.computeMaterial.uniforms.uInflow.value = inflow
         this.computeMaterial.uniforms.uSeaLevel.value = seaLevel
         this.computeMaterial.uniforms.uTime.value = time
 
@@ -195,7 +197,7 @@ export class WaterComputeSystem {
     }
 }
 
-export const updateCellWaterData = (i: number, j: number, vertices: TerrainVertex[][], state: Partial<GameState>, getRiverCarve: (i: number, j: number) => number, MANUAL_HEIGHTS: number[][]) => {
+export const updateCellWaterData = (i: number, j: number, vertices: TerrainVertex[][], state: Partial<GameState>) => {
   const idx = j * GRID_SIZE + i
   const h00 = getVertexTotalHeight(vertices[i][j])
   const h10 = getVertexTotalHeight(vertices[i + 1][j])
@@ -215,26 +217,12 @@ export const updateCellWaterData = (i: number, j: number, vertices: TerrainVerte
   const ac = totalAc / 4
   state.aCap![idx] = ac
 
-  const carveAtCenter = getRiverCarve(i + 0.5, j + 0.5)
-  if (carveAtCenter > 0.5) {
-    const fi = ((i + 0.5) / GRID_SIZE) * 10, fj = ((j + 0.5) / GRID_SIZE) * 10
-    const i0 = Math.floor(fi), i1 = Math.min(10, i0 + 1)
-    const j0 = Math.floor(fj), j1 = Math.min(10, j0 + 1)
-    const wi = fi - i0, wj = fj - j0
-    const oh = (1 - wi) * (1 - wj) * MANUAL_HEIGHTS[i0][j0] + wi * (1 - wj) * MANUAL_HEIGHTS[i1][j0] + (1 - wi) * wj * MANUAL_HEIGHTS[i0][j1] + wi * wj * MANUAL_HEIGHTS[i1][j1]
-    
-    if (i < 5) {
-      state.rLevel![idx] = oh - 0.05
-      state.sWater![idx] = Math.max(0, state.rLevel![idx] - th)
-    } else if (i > 95) {
-      state.rLevel![idx] = oh - 1.5
-      state.sWater![idx] = 0
-    }
-    state.gWater![idx] = ac
-  } else if (th < -0.8) {
+  if (th < -0.8) {
     state.sWater![idx] = Math.max(0, -0.8 - th)
     state.gWater![idx] = ac
   } else if (th < 0) {
     state.gWater![idx] = ac * 0.8
+  } else {
+    state.gWater![idx] = ac * 0.2
   }
 }

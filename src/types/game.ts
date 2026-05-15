@@ -52,6 +52,25 @@ export interface TerrainLayer {
 
 export type TerrainVertex = TerrainLayer[]
 
+export interface TerrainData {
+  vertices: TerrainVertex[][]
+  sWater: Float32Array
+  gWater: Float32Array
+  tHeight: Float32Array
+  aCap: Float32Array
+  rLevel: Float32Array
+  buildings: BuildingInstance[]
+  occupancyGrid: (string | null)[][]
+}
+
+export interface TerrainConfig {
+  id: string
+  name: string
+  visualRange: [number, number] // [minY, maxY] for rendering sides/depth
+  generate: () => TerrainData
+  getInflow?: (gameTime: number) => number
+}
+
 export interface GameResources {
   food: number
   wood: number
@@ -70,6 +89,7 @@ export interface GameState {
   occupancyGrid: (string | null)[][] 
   terrainVertices: TerrainVertex[][]
   terrainVersion: number
+  activeTerrainId: string
   
   // Buffers for simulation (Flattened 100x100)
   sWater: Float32Array

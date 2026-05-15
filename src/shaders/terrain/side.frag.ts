@@ -6,6 +6,7 @@ export const terrainSideFragmentChunks = {
         uniform sampler2DArray uTerrainLayers;
         uniform sampler2D uTerrainSurface;
         uniform vec3 uLayerColors[6];
+        uniform vec2 uVisualRange;
         varying float vWorldY;
         varying float vSurfaceY;
         varying vec2 vGridUv;
@@ -22,7 +23,7 @@ export const terrainSideFragmentChunks = {
         
         vec2 sUv = (vGridUv * 100.0 + 0.5) / 101.0;
         
-        float currentH = -5.0;
+        float currentH = uVisualRange.x;
         vec3 terrainColor = uLayerColors[0];
 
         for (int i = 0; i < MAX_LAYERS; i++) {

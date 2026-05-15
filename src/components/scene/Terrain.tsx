@@ -3,8 +3,9 @@ import { useMemo, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
-import { GRID_SIZE, TILE_SIZE, SEA_LEVEL, MATERIAL_PROPERTIES, MAX_GPU_LAYERS, LAYER_ID_MAP } from '../../constants/gameConfig'
+import { GRID_SIZE, TILE_SIZE, SEA_LEVEL, MATERIAL_PROPERTIES, MAX_GPU_LAYERS, LAYER_ID_MAP, TERRAIN_BASE_Y } from '../../constants/gameConfig'
 import { WaterComputeSystem } from '../../systems/waterSystem'
+import { getTerrainById } from '../../terrains'
 import type { LayerType } from '../../types/game'
 import { TerrainManager } from '../../managers/TerrainManager'
 import { PICKING_LAYER } from './PickingSystem'
@@ -32,10 +33,13 @@ export const Terrain = () => {
   const rainIntensity = useStore((state) => state.rainIntensity)
   const day = useStore((state) => state.day)
   const gameTime = useStore((state) => state.gameTime)
-  
+  const activeTerrainId = useStore((state) => state.activeTerrainId)
+
   const placeBuilding = useStore((state) => state.placeBuilding)
   const selectedBuildingType = useStore((state) => state.selectedBuildingType)
   const hoveredCell = useStore((state) => state.hoveredCell)
+
+  const terrainConfig = useMemo(() => getTerrainById(activeTerrainId), [activeTerrainId])
 
   const [gpuSim] = useState(() => new WaterComputeSystem(gl))
 
@@ -119,7 +123,7 @@ export const Terrain = () => {
         const gridI = Math.min(i, GRID_SIZE - 1)
         const gridJ = Math.min(j, GRID_SIZE - 1)
         const gridIdx = gridJ * GRID_SIZE + gridI
-        const height = totalHeight - 5.0 // Use actual vertex height (TERRAIN_BASE_Y = -5)
+        const height = totalHeight + TERRAIN_BASE_Y
         
         sData[texIdx] = height
         sData[texIdx + 1] = rLevel[gridIdx] || -99
@@ -197,17 +201,21 @@ export const Terrain = () => {
   }, [uniforms.uTerrainSurface])
 
   const sideGeometry = useMemo(() => {
-    const geo = new THREE.PlaneGeometry(GRID_SIZE * TILE_SIZE, 1, GRID_SIZE, 1)
-    geo.translate(0, 0.5, 0) // Shift so bottom is at 0
+    const [minY, maxY] = terrainConfig.visualRange
+    const height = maxY - minY
+    const center = (minY + maxY) / 2
+    const geo = new THREE.PlaneGeometry(GRID_SIZE * TILE_SIZE, height, GRID_SIZE, 1)
+    geo.translate(0, center, 0)
     return geo
-  }, [])
+  }, [terrainConfig])
 
   const onBeforeCompileSide = (shader: THREE.ShaderLibShader, edge: 'N' | 'S' | 'E' | 'W') => {
     shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.uniforms.uLayerColors = uniforms.uLayerColors
+    shader.uniforms.uVisualRange = { value: new THREE.Vector2(...terrainConfig.visualRange) }
     
-    shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${terrainSideVertexChunks.common}`)
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\nuniform vec2 uVisualRange;\n${terrainSideVertexChunks.common}`)
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${terrainSideVertexChunks.begin(edge)}`)
     
     shader.fragmentShader = `#define MAX_LAYERS ${MAX_GPU_LAYERS}\n` + shader.fragmentShader.replace('#include <common>', `#include <common>\n${terrainSideFragmentChunks.common}`)
@@ -244,8 +252,12 @@ export const Terrain = () => {
   useFrame((state) => {
     // 1. Run GPU Simulation
     const currentSeaLevel = SEA_LEVEL + Math.sin(day * 0.5 + gameTime * 0.02) * 0.2
+    
+    // Get current terrain config for inflow
+    const inflow = terrainConfig.getInflow ? terrainConfig.getInflow(gameTime) : 0
+    
     for (let i = 0; i < 5; i++) { // 5 sub-steps
-      gpuSim.step(rainIntensity, currentSeaLevel, state.clock.getElapsedTime())
+      gpuSim.step(rainIntensity, inflow, currentSeaLevel, state.clock.getElapsedTime())
     }
 
     // 2. Read back to CPU for entity logic
@@ -316,10 +328,9 @@ export const Terrain = () => {
         position={[0, 0, 0]} 
         geometry={waterGeometry}
       >
-        <meshStandardMaterial 
-          flatShading 
-          onBeforeCompile={onBeforeCompileWater} 
-          polygonOffset
+        <meshStandardMaterial
+          flatShading
+          onBeforeCompile={onBeforeCompileWater}          polygonOffset
           polygonOffsetFactor={-1}
           polygonOffsetUnits={-1}
         />
