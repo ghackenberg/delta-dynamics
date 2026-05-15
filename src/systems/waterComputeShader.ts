@@ -30,11 +30,15 @@ void main() {
     float sDelta = 0.0;
     float gDelta = 0.0;
 
-    vec2 offsets[4];
+    vec2 offsets[8];
     offsets[0] = vec2(-texel.x, 0.0);
     offsets[1] = vec2(texel.x, 0.0);
     offsets[2] = vec2(0.0, -texel.y);
     offsets[3] = vec2(0.0, texel.y);
+    offsets[4] = vec2(-texel.x, -texel.y);
+    offsets[5] = vec2(texel.x, -texel.y);
+    offsets[6] = vec2(-texel.x, texel.y);
+    offsets[7] = vec2(texel.x, texel.y);
 
     for (int k = 0; k < 4; k++) {
         vec2 nUv = uv + offsets[k];
@@ -115,7 +119,7 @@ void main() {
     // Visual Extrapolation: Store sL in Alpha. For dry cells (or cells lower than neighbors), 
     // use the level of the wettest neighbor to allow flat intersection and prevent flickering.
     float visualSL = sw > 0.001 ? sL : -100.0;
-    for (int k = 0; k < 4; k++) {
+    for (int k = 0; k < 8; k++) {
         vec2 nUv = uv + offsets[k];
         if (nUv.x < 0.0 || nUv.x > 1.0 || nUv.y < 0.0 || nUv.y > 1.0) continue;
         vec4 nWater = texture2D(uWater, nUv);
