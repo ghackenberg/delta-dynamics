@@ -5,6 +5,10 @@ import { useStore } from '../../hooks/useStore'
 
 export const PICKING_LAYER = 1
 
+const restoreLayers = (layers: THREE.Layers, mask: number) => {
+  layers.mask = mask
+}
+
 export const PickingSystem = () => {
   const { gl, scene, camera, mouse, size } = useThree()
   const setHoveredCell = useStore((state) => state.setHoveredCell)
@@ -51,8 +55,7 @@ export const PickingSystem = () => {
     if (camera instanceof THREE.PerspectiveCamera || camera instanceof THREE.OrthographicCamera) {
         camera.clearViewOffset()
     }
-    /* eslint-disable-next-line react-hooks/immutability */
-    camera.layers.mask = originalMask
+    restoreLayers(camera.layers, originalMask)
 
     // 5. Read back the pixel
     gl.readRenderTargetPixels(target, 0, 0, 1, 1, pixelBuffer)

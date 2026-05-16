@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/immutability */
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { SEA_LEVEL } from '../../../constants/gameConfig'
@@ -6,15 +5,32 @@ import { WaterComputeSystem } from '../../../systems/waterSystem'
 import { useStore } from '../../../hooks/useStore'
 import type { TerrainConfig } from '../../../types/game'
 
+interface WaterUniforms {
+  waterMap: { value: THREE.Texture | null }
+  uTime: { value: number }
+  uHoveredCell: { value: THREE.Vector2 }
+}
+
 interface WaterSimulationProps {
   gpuSim: WaterComputeSystem
   terrainConfig: TerrainConfig
-  uniforms: {
-    waterMap: { value: THREE.Texture | null }
-    uTime: { value: number }
-    uHoveredCell: { value: THREE.Vector2 }
-  }
+  uniforms: WaterUniforms
   surfaceTex: THREE.DataTexture
+}
+
+const updateWaterUniforms = (
+  uniforms: WaterUniforms,
+  waterTex: THREE.Texture,
+  time: number,
+  hoveredCell: { x: number, z: number } | null
+) => {
+  uniforms.waterMap.value = waterTex
+  uniforms.uTime.value = time
+  if (hoveredCell) {
+    uniforms.uHoveredCell.value.set(hoveredCell.x, hoveredCell.z)
+  } else {
+    uniforms.uHoveredCell.value.set(-1, -1)
+  }
 }
 
 export const WaterSimulation = ({ 
@@ -48,14 +64,7 @@ export const WaterSimulation = ({
 
     // 3. Update Uniforms
     const waterTex = gpuSim.getWaterTexture()
-    uniforms.waterMap.value = waterTex
-    uniforms.uTime.value = state.clock.getElapsedTime()
-    
-    if (hoveredCell) {
-        uniforms.uHoveredCell.value.set(hoveredCell.x, hoveredCell.z)
-    } else {
-        uniforms.uHoveredCell.value.set(-1, -1)
-    }
+    updateWaterUniforms(uniforms, waterTex, state.clock.getElapsedTime(), hoveredCell)
 
     setTextures(surfaceTex, waterTex as THREE.DataTexture)
   })

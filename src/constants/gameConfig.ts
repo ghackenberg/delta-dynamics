@@ -7,6 +7,7 @@ export const SEA_LEVEL = -0.8
 export const OFFSET = (GRID_SIZE * TILE_SIZE) / 2 - TILE_SIZE / 2 
 export const BOUNDARY = (GRID_SIZE * TILE_SIZE) / 2 
 export const MAX_GPU_LAYERS = 8
+export const MAX_TREES = 5000
 
 export const LAYER_ID_MAP: Record<LayerType, number> = {
   ROCK: 0,

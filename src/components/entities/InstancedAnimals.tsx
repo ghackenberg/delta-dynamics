@@ -1,13 +1,9 @@
-/* eslint-disable react-hooks/immutability */
-import { useMemo, useRef, useEffect, useState } from 'react'
+import { useMemo, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
 import { PICKING_LAYER } from '../scene/PickingSystem'
-import { surfaceVertexChunks } from '../../shaders/animals/surface.vert'
-import { pickingVertexChunks } from '../../shaders/animals/picking.vert'
-import { pickingFragmentShader } from '../../shaders/animals/picking.frag'
-import { GRID_SIZE, TILE_SIZE } from '../../constants/gameConfig'
+import { AnimalManager } from '../../managers/AnimalManager'
 
 const MAX_ANIMALS = 500
 
@@ -28,15 +24,7 @@ export const InstancedAnimals = () => {
   const deerPickingRef = useRef<THREE.InstancedMesh>(null)
   const wolfPickingRef = useRef<THREE.InstancedMesh>(null)
 
-  // Use useState initializer for a stable uniform object
-  const [uTime] = useState(() => ({ value: 0 }))
-
-  const animalTypes = useMemo(() => {
-    return {
-      DEER: animals.filter(a => a.type === 'DEER'),
-      WOLF: animals.filter(a => a.type === 'WOLF')
-    }
-  }, [animals])
+  const manager = useMemo(() => new AnimalManager(null), [])
 
   const randomAttr = useMemo(() => {
     return new THREE.InstancedBufferAttribute(STATIC_RANDOM_VALUES, 1)
@@ -51,90 +39,44 @@ export const InstancedAnimals = () => {
   }, [randomAttr])
 
   useEffect(() => {
-    const dummy = new THREE.Object3D()
-    const updateMesh = (ref: React.RefObject<THREE.InstancedMesh | null>, pickingRef: React.RefObject<THREE.InstancedMesh | null>, list: typeof animals) => {
-      if (!ref.current || !pickingRef.current) return
-      
-      const pickingAttr = ref.current.geometry.getAttribute('aPickingId') as THREE.InstancedBufferAttribute
-      const pickingArray = pickingAttr.array as Float32Array
-      
-      pickingArray.fill(0)
-      
-      list.forEach((animal, i) => {
-        dummy.position.set(animal.position[0], 0, animal.position[1])
-        dummy.rotation.y = animal.rotation
-        dummy.scale.setScalar(animal.type === 'WOLF' ? 0.15 : 0.2)
-        dummy.updateMatrix()
-        
-        ref.current!.setMatrixAt(i, dummy.matrix)
-        pickingRef.current!.setMatrixAt(i, dummy.matrix)
-        pickingArray[i] = animal.pickingId || 0
-      })
-      
-      ref.current.count = list.length
-      ref.current.instanceMatrix.needsUpdate = true
-      
-      pickingRef.current.count = list.length
-      pickingRef.current.instanceMatrix.needsUpdate = true
-      
-      pickingAttr.needsUpdate = true
-    }
-    updateMesh(deerRef, deerPickingRef, animalTypes.DEER)
-    updateMesh(wolfRef, wolfPickingRef, animalTypes.WOLF)
-  }, [animalTypes, animals])
+    manager.updateHeightTexture(heightTexture)
+  }, [manager, heightTexture])
+
+  useEffect(() => {
+    if (!deerRef.current || !wolfRef.current || !deerPickingRef.current || !wolfPickingRef.current) return
+    
+    manager.updateInstances(
+      deerRef.current,
+      wolfRef.current,
+      deerPickingRef.current,
+      wolfPickingRef.current,
+      animals
+    )
+  }, [manager, animals])
 
   useFrame((state) => {
-    uTime.value = state.clock.getElapsedTime()
+    manager.updateTime(state.clock.getElapsedTime())
   })
 
-  const mats = useMemo(() => {
-    const createMat = (color: string) => {
-      const m = new THREE.MeshStandardMaterial({ color })
-      m.onBeforeCompile = (shader) => {
-        shader.uniforms.heightMap = { value: heightTexture }
-        shader.uniforms.uTime = uTime
-        shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
-        shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${surfaceVertexChunks.common}`)
-        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${surfaceVertexChunks.begin}`)
-      }
-      return m
-    }
-    const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
-    depth.onBeforeCompile = (shader) => {
-      shader.uniforms.heightMap = { value: heightTexture }
-      shader.uniforms.uTime = uTime
-      shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
-      shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${surfaceVertexChunks.common}`)
-      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${surfaceVertexChunks.begin}`)
-    }
-    
-    const picking = new THREE.MeshBasicMaterial()
-    picking.onBeforeCompile = (shader) => {
-      shader.uniforms.heightMap = { value: heightTexture }
-      shader.uniforms.uGridSize = { value: GRID_SIZE * TILE_SIZE }
-      shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${pickingVertexChunks.common}`)
-      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${pickingVertexChunks.begin}`)
-      shader.fragmentShader = pickingFragmentShader
-    }
-    
-    return { deer: createMat('#8d5524'), wolf: createMat('#444444'), depth, picking }
-  }, [heightTexture, uTime])
+  useEffect(() => {
+    return () => manager.dispose()
+  }, [manager])
 
   return (
     <group>
-      <instancedMesh ref={deerRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={mats.depth} frustumCulled={false}>
-        <primitive object={mats.deer} attach="material" />
+      <instancedMesh ref={deerRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
+        <primitive object={manager.materials.deer} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={wolfRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={mats.depth} frustumCulled={false}>
-        <primitive object={mats.wolf} attach="material" />
+      <instancedMesh ref={wolfRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
+        <primitive object={manager.materials.wolf} attach="material" />
       </instancedMesh>
 
       {/* Picking Meshes */}
       <instancedMesh ref={deerPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
-        <primitive object={mats.picking} attach="material" />
+        <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
       <instancedMesh ref={wolfPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
-        <primitive object={mats.picking} attach="material" />
+        <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
     </group>
   )

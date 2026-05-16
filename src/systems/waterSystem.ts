@@ -1,9 +1,10 @@
 import * as THREE from 'three'
-import { waterVertexShader } from '../shaders/water/simulation.vert'
-import { waterFragmentShader } from '../shaders/water/simulation.frag'
+import { waterSimulationVertexModule } from '../shaders/water/simulation.vert'
+import { waterSimulationFragmentModule } from '../shaders/water/simulation.frag'
 import { GRID_SIZE, MAX_GPU_LAYERS, LAYER_ID_MAP, MATERIAL_PROPERTIES } from '../constants/gameConfig'
 import type { GameState, TerrainVertex } from '../types/game'
 import { getVertexTotalHeight } from '../utils/gameUtils'
+import { applyModulesToShader, type Shader } from '../utils/shaderUtils'
 
 export class WaterComputeSystem {
     private renderer: THREE.WebGLRenderer
@@ -44,7 +45,7 @@ export class WaterComputeSystem {
         this.terrainSurfaceTexture.minFilter = THREE.NearestFilter
         this.terrainSurfaceTexture.magFilter = THREE.NearestFilter
 
-        this.computeMaterial = new THREE.ShaderMaterial({
+        const computeShader = {
             uniforms: {
                 uWater: { value: null },
                 uTerrainLayers: { value: this.terrainLayersTexture },
@@ -56,8 +57,17 @@ export class WaterComputeSystem {
                 uTime: { value: 0 },
                 uResolution: { value: new THREE.Vector2(GRID_SIZE, GRID_SIZE) }
             },
-            vertexShader: waterVertexShader,
-            fragmentShader: `#define MAX_LAYERS ${MAX_GPU_LAYERS}\n${waterFragmentShader}`
+            vertexShader: waterSimulationVertexModule.vertex?.main || '',
+            fragmentShader: waterSimulationFragmentModule.fragment?.main || ''
+        }
+        
+        // Use our utility to apply modules (handles defines etc)
+        applyModulesToShader(computeShader as Shader, [waterSimulationVertexModule, waterSimulationFragmentModule])
+
+        this.computeMaterial = new THREE.ShaderMaterial({
+            uniforms: computeShader.uniforms,
+            vertexShader: computeShader.vertexShader,
+            fragmentShader: computeShader.fragmentShader
         })
 
         this.scene = new THREE.Scene()
