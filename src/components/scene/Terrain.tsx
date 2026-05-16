@@ -7,7 +7,6 @@ import { GRID_SIZE, TILE_SIZE, MATERIAL_PROPERTIES, MAX_GPU_LAYERS, LAYER_ID_MAP
 import { WaterComputeSystem } from '../../systems/waterSystem'
 import { getTerrainById } from '../../terrains'
 import type { LayerType } from '../../types/game'
-import { TerrainManager } from '../../managers/TerrainManager'
 
 import { terrainSurfaceVertexChunks } from '../../shaders/terrain/surface.vert'
 import { terrainSurfaceFragmentChunks } from '../../shaders/terrain/surface.frag'
@@ -114,10 +113,10 @@ export const Terrain = () => {
   }, [])
 
   const aCap = useStore((state) => state.aCap)
+  const terrainVertices = useStore((state) => state.terrainVertices)
 
   // Update terrain texture when vertices change
   useEffect(() => {
-    const terrainVertices = TerrainManager.getInstance().getVertices()
     gpuSim.updateTerrain(terrainVertices, rLevel, aCap)
     gpuSim.updateMaterialProperties(layerPermeabilities)
 
@@ -163,7 +162,7 @@ export const Terrain = () => {
     }
     layerTex.needsUpdate = true
     surfaceTex.needsUpdate = true
-  }, [gpuSim, terrainVersion, rLevel, aCap, layerTex, surfaceTex, layerPermeabilities])
+  }, [gpuSim, terrainVersion, terrainVertices, rLevel, aCap, layerTex, surfaceTex, layerPermeabilities])
 
   const uniforms = useMemo(() => ({
     uTerrainLayers: { value: layerTex },

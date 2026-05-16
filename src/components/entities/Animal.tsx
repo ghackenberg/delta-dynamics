@@ -1,8 +1,9 @@
 import { useRef } from 'react'
 import * as THREE from 'three'
-import { TerrainManager } from '../../managers/TerrainManager'
 import { BOUNDARY, TILE_SIZE } from '../../constants/gameConfig'
 import type { AnimalType } from '../../types/game'
+import { useStore } from '../../hooks/useStore'
+import { getInterpolatedHeight } from '../../systems/terrainSystem'
 
 
 
@@ -14,10 +15,11 @@ interface AnimalProps {
 
 export const Animal = ({ position, rotation, type }: AnimalProps) => {
   const meshRef = useRef<THREE.Group>(null!)
+  const terrainVertices = useStore(state => state.terrainVertices)
   
   const gridX = (position[0] + BOUNDARY) / TILE_SIZE
   const gridZ = (position[1] + BOUNDARY) / TILE_SIZE
-  const yPos = TerrainManager.getInstance().getInterpolatedHeight(gridX, gridZ)
+  const yPos = getInterpolatedHeight(terrainVertices, gridX, gridZ)
 
   const getColor = () => {
     if (type === 'DEER') return '#8B4513' // Brown

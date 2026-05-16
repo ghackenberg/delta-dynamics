@@ -5,8 +5,8 @@ import { BUILDING_SIZES, BUILDING_COLORS, GRID_SIZE, TILE_SIZE, OFFSET, BOUNDARY
 import { Human } from '../entities/Human'
 import { InstancedTrees } from './InstancedTrees'
 import { InstancedAnimals } from '../entities/InstancedAnimals'
-import { TerrainManager } from '../../managers/TerrainManager'
 import { PICKING_LAYER } from './PickingSystem'
+import { getInterpolatedHeight, isAreaFlat } from '../../systems/terrainSystem'
 
 export const GameGrid = () => {
   const buildings = useStore((state) => state.buildings)
@@ -15,6 +15,7 @@ export const GameGrid = () => {
   const humans = useStore((state) => state.humans)
   const hoveredCell = useStore((state) => state.hoveredCell)
   const selectedBuildingType = useStore((state) => state.selectedBuildingType)
+  const terrainVertices = useStore((state) => state.terrainVertices)
 
   const isValidPlacement = useMemo(() => {
     if (!hoveredCell) return true
@@ -31,11 +32,10 @@ export const GameGrid = () => {
 
     const isTreeType = ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(selectedBuildingType)
     if (isTreeType) {
-      const vertices = TerrainManager.getInstance().getVertices()
       let isHumusCell = true
       for (let di = 0; di <= 1; di++) {
         for (let dj = 0; dj <= 1; dj++) {
-          const v = vertices[x + di][z + dj]
+          const v = terrainVertices[x + di][z + dj]
           if (v[v.length - 1].type !== 'HUMUS') {
             isHumusCell = false
             break
@@ -54,18 +54,18 @@ export const GameGrid = () => {
     }
 
     if (['HOUSE', 'FARM', 'LUMBER_MILL', 'QUARRY'].includes(selectedBuildingType)) {
-      return TerrainManager.getInstance().isAreaFlat(x, z, size.width, size.height)
+      return isAreaFlat(terrainVertices, x, z, size.width, size.height)
     }
 
     return true
-  }, [hoveredCell, occupancyGrid, buildings, sWater, selectedBuildingType])
+  }, [hoveredCell, occupancyGrid, buildings, sWater, selectedBuildingType, terrainVertices])
   
   const buildingMeshes = buildings.filter(b => !['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(b.type)).map((building) => {
     const worldX = (building.x + (building.width - 1) / 2) * TILE_SIZE - OFFSET
     const worldZ = (building.z + (building.height - 1) / 2) * TILE_SIZE - OFFSET
     const gridX = (worldX + BOUNDARY) / TILE_SIZE
     const gridZ = (worldZ + BOUNDARY) / TILE_SIZE
-    const hCenter = TerrainManager.getInstance().getInterpolatedHeight(gridX, gridZ)
+    const hCenter = getInterpolatedHeight(terrainVertices, gridX, gridZ)
     
     const colors = BUILDING_COLORS[building.type] || BUILDING_COLORS.DEFAULT
     const pickingColor = new THREE.Color(
@@ -128,7 +128,7 @@ export const GameGrid = () => {
     const worldZ = (hoveredCell.z + (size.height - 1) / 2) * TILE_SIZE - OFFSET
     const gridX = (worldX + BOUNDARY) / TILE_SIZE
     const gridZ = (worldZ + BOUNDARY) / TILE_SIZE
-    const hCenter = TerrainManager.getInstance().getInterpolatedHeight(gridX, gridZ)
+    const hCenter = getInterpolatedHeight(terrainVertices, gridX, gridZ)
     const colors = BUILDING_COLORS[selectedBuildingType] || BUILDING_COLORS.DEFAULT
 
     const isTreeType = ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(selectedBuildingType)

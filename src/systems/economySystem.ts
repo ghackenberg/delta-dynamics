@@ -1,6 +1,6 @@
-import type { BuildingInstance, BuildingType, GameResources, Human, GameState, LayerType } from '../types/game'
+import type { BuildingInstance, BuildingType, GameResources, Human, GameState, LayerType, TerrainVertex } from '../types/game'
 import { BUILDING_COSTS } from '../constants/gameConfig'
-import { TerrainManager } from '../managers/TerrainManager'
+import { modifyArea } from './terrainSystem'
 
 export const calculateRates = (buildings: BuildingInstance[]): GameResources => {
   const rates = { food: 0, wood: 0, stone: 0, gold: 0 }
@@ -17,7 +17,7 @@ export const calculateRates = (buildings: BuildingInstance[]): GameResources => 
 export const updateConstruction = (
   buildings: BuildingInstance[], 
   humans: Human[], 
-  terrainManager: TerrainManager, 
+  vertices: TerrainVertex[][], 
   occupancyGrid: (string | null)[][],
   tempState: Partial<GameState>
 ): { newBuildings: BuildingInstance[], newOccupancy: (string | null)[][], terrainChanged: boolean } => {
@@ -37,7 +37,7 @@ export const updateConstruction = (
           if (building.type === 'ROAD') type = 'PAVEMENT'
           else if (building.type === 'DIKE') type = 'GRAVEL'
           
-          const changed = terrainManager.modifyArea(building.x, building.z, building.width, building.height, type, amount, tempState)
+          const changed = modifyArea(vertices, building.x, building.z, building.width, building.height, type, amount, tempState)
           if (changed) terrainChanged = true
 
           const prog = Math.min(100, building.progress + workers * 0.1)

@@ -2,30 +2,30 @@
 
 This document outlines the proposed architectural changes to improve maintainability, performance, and scalability of the game engine.
 
-## 1. State Management (Zustand Splitting)
+## 1. State Management (Zustand Splitting) (COMPLETED)
 
 ### Current Issue
 `useStore.ts` is a "God Object" managing 30+ state variables and containing complex logic for building placement, terrain painting, and the main game tick. This makes it hard to test and maintain.
 
-### Proposed Solution
-Split the store into functional slices or separate stores:
-- **`useGameStore`**: Resources, time, buildings, humans, animals, and core terrain data.
-- **`useEditorStore`**: Brush settings, editor mode, and interaction state.
-- **`useDiagnosticStore`**: FPS, performance history, and debug flags.
-- **`useAiStore`**: AI chat history and status.
+### Solution Applied
+Split the store into functional slices:
+- **`src/stores/game.ts`**: Core game logic, resources, entities, and terrain.
+- **`src/stores/editor.ts`**: Brush settings and editor mode.
+- **`src/stores/ui.ts`**: HUD and menu states.
+- **`src/stores/ai.ts`**: AI chat history and status.
 
-## 2. Terrain & Simulation Decomposition
+## 2. Terrain & Simulation Decomposition (COMPLETED)
 
 ### Current Issue
-`Terrain.tsx` is 400+ lines long, handling GPU simulation, rendering of multiple meshes (terrain, water, sides), material compilation, and input handling.
+`Terrain.tsx` was handling too many responsibilities (GPU simulation, rendering of multiple meshes, material compilation).
 
-### Proposed Solution
-Decompose into specialized components:
-- **`<WaterSimulation />`**: A headless component that manages the `WaterComputeSystem`, runs the steps in `useFrame`, and performs the read-back.
-- **`<TerrainSurface />`**: Specialized in rendering the terrain mesh and its material.
-- **`<WaterSurface />`**: Specialized in rendering the water mesh.
-- **`<TerrainSides />`**: Renders the north, south, east, and west borders.
-- **`<TerrainInteraction />`**: Wraps the rendering components to handle `onPointer` events.
+### Solution Applied
+Decomposed into specialized components in `src/components/scene/terrain/`:
+- **`<WaterSimulation />`**: Manages `WaterComputeSystem` and GPU read-back.
+- **`<TerrainSurface />`**: Renders terrain mesh.
+- **`<WaterSurface />`**: Renders water mesh.
+- **`<TerrainSides />`**: Renders terrain borders.
+- **`<WaterSides />`**: Renders water borders.
 
 ## 3. Modular Shader System
 
@@ -37,15 +37,15 @@ Create a `ShaderFactory` or a structured registry for shader chunks.
 - Standardize the `uTerrainSurface` and `uTerrainLayers` uniform names across all shaders.
 - Use a helper to compose materials with standard game features (day/night, height-based coloring).
 
-## 4. TerrainManager & State Sync
+## 4. TerrainManager & State Sync (COMPLETED)
 
 ### Current Issue
-`TerrainManager` is a singleton that holds a duplicate of the `vertices` array. Direct mutations are performed on this array, bypassing Zustand's typical flow, though triggered by `terrainVersion`.
+`TerrainManager` was a singleton that held a duplicate of the `vertices` array. Direct mutations were performed on this array, bypassing Zustand's typical flow.
 
-### Proposed Solution
-- **Remove the Singleton**: Transform `TerrainManager` into a set of pure utility functions in `src/systems/terrainSystem.ts`.
-- **Single Source of Truth**: Vertices should live only in the Zustand store.
-- **Performance**: Use `useStore.getState().terrainVertices` for read access in systems. For mutations, use `immer` or similar, or continue with the "versioned mutation" pattern if performance is critical, but document it clearly as a "fast-path" bypass.
+### Solution Applied
+- **Removed the Singleton**: Transformed `TerrainManager` into a set of pure utility functions in `src/systems/terrainSystem.ts`.
+- **Single Source of Truth**: Vertices now live only in the Zustand store (`terrainVertices`).
+- **Performance**: Systems now use `useStore.getState().terrainVertices` for read access and pure functions for mutations, maintaining the "versioned mutation" pattern for performance.
 
 ## 5. Performance Optimizations
 

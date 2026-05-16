@@ -2,9 +2,10 @@ import { useRef, useMemo } from 'react'
 import { Html } from '@react-three/drei'
 
 import * as THREE from 'three'
-import { TerrainManager } from '../../managers/TerrainManager'
 import { BOUNDARY, TILE_SIZE } from '../../constants/gameConfig'
 import { PICKING_LAYER } from '../scene/PickingSystem'
+import { useStore } from '../../hooks/useStore'
+import { getInterpolatedHeight } from '../../systems/terrainSystem'
 
 interface HumanProps {
   pickingId?: number
@@ -18,10 +19,11 @@ interface HumanProps {
 
 export const Human = ({ pickingId, position, rotation, state, name, color, outfitColor }: HumanProps) => {
   const meshRef = useRef<THREE.Group>(null!)
+  const terrainVertices = useStore(state => state.terrainVertices)
   
   const gridX = (position[0] + BOUNDARY) / TILE_SIZE
   const gridZ = (position[1] + BOUNDARY) / TILE_SIZE
-  const yPos = TerrainManager.getInstance().getInterpolatedHeight(gridX, gridZ)
+  const yPos = getInterpolatedHeight(terrainVertices, gridX, gridZ)
 
   const actualOutfitColor = state === 'SLEEPING' ? '#333' : outfitColor
   const actualSkinColor = state === 'SLEEPING' ? '#555' : color

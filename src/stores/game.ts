@@ -17,7 +17,7 @@ import {
   BUILDING_SIZES 
 } from '../constants/gameConfig'
 import { gridToWorld } from '../utils/gameUtils'
-import { generateInitialTerrain } from '../systems/terrainSystem'
+import { generateInitialTerrain, paintArea, isAreaFlat } from '../systems/terrainSystem'
 import { 
   findSafeLandPosition, 
   getRandomSkinTone, 
@@ -31,7 +31,6 @@ import {
   checkBuildingCost, 
   deductBuildingCost 
 } from '../systems/economySystem'
-import { TerrainManager } from '../managers/TerrainManager'
 import type { EditorSlice } from './editor'
 import type { AiSlice } from './ai'
 import type { UiSlice } from './ui'
@@ -58,8 +57,6 @@ const {
   buildings: initialBuildings, 
   occupancyGrid: initialOccupancy 
 } = generateInitialTerrain(activeTerrainId)
-
-TerrainManager.getInstance().initialize(initialVertices)
 
 const initialHumans = [{ 
   id: 'starter', 
@@ -179,7 +176,7 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
     const { newBuildings, newOccupancy, terrainChanged } = updateConstruction(
       state.buildings, 
       newHumans, 
-      TerrainManager.getInstance(), 
+      state.terrainVertices, 
       state.occupancyGrid, 
       tempState
     )
@@ -304,7 +301,7 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
       for (let j = zIndex; j < zIndex + size.height; j++) 
         if (state.occupancyGrid[i][j] || state.sWater[j * GRID_SIZE + i] > 0.05) return state
 
-    if (['HOUSE', 'FARM', 'LUMBER_MILL', 'QUARRY'].includes(type) && !TerrainManager.getInstance().isAreaFlat(xIndex, zIndex, size.width, size.height)) return state
+    if (['HOUSE', 'FARM', 'LUMBER_MILL', 'QUARRY'].includes(type) && !isAreaFlat(state.terrainVertices, xIndex, zIndex, size.width, size.height)) return state
     
     if (!checkBuildingCost(type, state.resources)) return state 
     
@@ -345,7 +342,8 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
   }),
 
   paintTerrain: (xIndex, zIndex, isErase) => set((state) => {
-    const changed = TerrainManager.getInstance().paintArea(
+    const changed = paintArea(
+      state.terrainVertices,
       xIndex, zIndex,
       state.editorBrushSize,
       state.editorLayerType,
@@ -360,7 +358,6 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
 
   resetTerrain: () => {
     const { vertices, sWater, gWater, tHeight, aCap, rLevel, buildings, occupancyGrid } = generateInitialTerrain('flat')
-    TerrainManager.getInstance().initialize(vertices)
     set((state) => ({
       terrainVertices: vertices,
       sWater,
