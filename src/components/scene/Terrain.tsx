@@ -1,14 +1,14 @@
 /* eslint-disable react-hooks/immutability */
-import { useMemo, useState, useEffect } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
+import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useThree, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
-import { GRID_SIZE, TILE_SIZE, SEA_LEVEL, MATERIAL_PROPERTIES, MAX_GPU_LAYERS, LAYER_ID_MAP, TERRAIN_BASE_Y } from '../../constants/gameConfig'
+import { GRID_SIZE, TILE_SIZE, MATERIAL_PROPERTIES, MAX_GPU_LAYERS, LAYER_ID_MAP, TERRAIN_BASE_Y } from '../../constants/gameConfig'
 import { WaterComputeSystem } from '../../systems/waterSystem'
 import { getTerrainById } from '../../terrains'
 import type { LayerType } from '../../types/game'
 import { TerrainManager } from '../../managers/TerrainManager'
-import { PICKING_LAYER } from './PickingSystem'
+
 import { terrainSurfaceVertexChunks } from '../../shaders/terrain/surface.vert'
 import { terrainSurfaceFragmentChunks } from '../../shaders/terrain/surface.frag'
 import { pickingVertexChunks as terrainPickingVertexChunks } from '../../shaders/terrain/picking.vert'
@@ -23,6 +23,12 @@ import { terrainSideFragmentChunks } from '../../shaders/terrain/side.frag'
 import { waterSideVertexChunks } from '../../shaders/water/side.vert'
 import { waterSideFragmentChunks } from '../../shaders/water/side.frag'
 
+import { WaterSimulation } from './terrain/WaterSimulation'
+import { TerrainSurface } from './terrain/TerrainSurface'
+import { WaterSurface } from './terrain/WaterSurface'
+import { TerrainSides } from './terrain/TerrainSides'
+import { WaterSides } from './terrain/WaterSides'
+
 export const Terrain = () => {
   const { gl } = useThree()
   const terrainVersion = useStore((state) => state.terrainVersion)
@@ -30,9 +36,6 @@ export const Terrain = () => {
   const gWater = useStore((state) => state.gWater)
   const tHeight = useStore((state) => state.tHeight)
   const rLevel = useStore((state) => state.rLevel)
-  const rainIntensity = useStore((state) => state.rainIntensity)
-  const day = useStore((state) => state.day)
-  const gameTime = useStore((state) => state.gameTime)
   const activeTerrainId = useStore((state) => state.activeTerrainId)
 
   const placeBuilding = useStore((state) => state.placeBuilding)
@@ -124,8 +127,6 @@ export const Terrain = () => {
     const size = GRID_SIZE + 1
     
     for (let j = 0; j <= GRID_SIZE; j++) {
-      // Invert j for texture row to match Three.js v-coord (v=0 is bottom/South)
-      // Logic j=0 is North, should be v=1 (top row)
       const texJ = GRID_SIZE - j
       const rowOff = texJ * size
       for (let i = 0; i <= GRID_SIZE; i++) {
@@ -157,12 +158,12 @@ export const Terrain = () => {
         sData[texIdx] = height
         sData[texIdx + 1] = rLevel[gridIdx] || -99
         sData[texIdx + 2] = topTypeIdx
-        sData[texIdx + 3] = aCap[gridIdx] // Keep consistent with GPU surface.a
+        sData[texIdx + 3] = aCap[gridIdx]
       }
     }
     layerTex.needsUpdate = true
     surfaceTex.needsUpdate = true
-  }, [gpuSim, terrainVersion, rLevel, aCap, tHeight, layerTex, surfaceTex, layerPermeabilities])
+  }, [gpuSim, terrainVersion, rLevel, aCap, layerTex, surfaceTex, layerPermeabilities])
 
   const uniforms = useMemo(() => ({
     uTerrainLayers: { value: layerTex },
@@ -185,30 +186,29 @@ export const Terrain = () => {
     return staticGeometry.clone().toNonIndexed()
   }, [staticGeometry])
 
-  const onBeforeCompileTerrain = (shader: THREE.ShaderLibShader) => {
+  const onBeforeCompileTerrain = useCallback((shader: THREE.ShaderLibShader) => {
     shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.uniforms.uTileSize = uniforms.uTileSize
+    shader.uniforms.uHoveredCell = uniforms.uHoveredCell
+    shader.uniforms.uLayerColors = uniforms.uLayerColors
+    shader.uniforms.uLayerHighlightColors = uniforms.uLayerHighlightColors
 
     shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${terrainSurfaceVertexChunks.common}`)
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${terrainSurfaceVertexChunks.begin}`)
     
-    shader.uniforms.uHoveredCell = uniforms.uHoveredCell
-    shader.uniforms.uLayerColors = uniforms.uLayerColors
-    shader.uniforms.uLayerHighlightColors = uniforms.uLayerHighlightColors
-    
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>\n${terrainSurfaceFragmentChunks.common}`)
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n${terrainSurfaceFragmentChunks.color}`)
-  }
+  }, [uniforms])
 
-  const onBeforeCompilePicking = (shader: THREE.ShaderLibShader) => {
+  const onBeforeCompilePicking = useCallback((shader: THREE.ShaderLibShader) => {
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${terrainPickingVertexChunks.common}`)
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${terrainPickingVertexChunks.begin}`)
     shader.fragmentShader = terrainPickingFragmentShader
-  }
+  }, [uniforms.uTerrainSurface])
 
-  const onBeforeCompileWaterPicking = (shader: THREE.ShaderLibShader) => {
+  const onBeforeCompileWaterPicking = useCallback((shader: THREE.ShaderLibShader) => {
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.uniforms.waterMap = uniforms.waterMap
     shader.uniforms.uTime = uniforms.uTime
@@ -217,7 +217,7 @@ export const Terrain = () => {
     
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>\n${waterPickingFragmentChunks.common}`)
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n${waterPickingFragmentChunks.color}`)
-  }
+  }, [uniforms])
 
   const terrainDepthMaterial = useMemo(() => {
     const mat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
@@ -238,7 +238,7 @@ export const Terrain = () => {
     return geo
   }, [terrainConfig])
 
-  const onBeforeCompileSide = (shader: THREE.ShaderLibShader, edge: 'N' | 'S' | 'E' | 'W') => {
+  const onBeforeCompileSide = useCallback((shader: THREE.ShaderLibShader, edge: 'N' | 'S' | 'E' | 'W') => {
     shader.uniforms.uTerrainLayers = uniforms.uTerrainLayers
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.uniforms.uLayerColors = uniforms.uLayerColors
@@ -249,9 +249,9 @@ export const Terrain = () => {
     
     shader.fragmentShader = `#define MAX_LAYERS ${MAX_GPU_LAYERS}\n` + shader.fragmentShader.replace('#include <common>', `#include <common>\n${terrainSideFragmentChunks.common}`)
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n${terrainSideFragmentChunks.color}`)
-  }
+  }, [uniforms, terrainConfig.visualRange])
 
-  const onBeforeCompileWaterSide = (shader: THREE.ShaderLibShader, edge: 'N' | 'S' | 'E' | 'W') => {
+  const onBeforeCompileWaterSide = useCallback((shader: THREE.ShaderLibShader, edge: 'N' | 'S' | 'E' | 'W') => {
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.uniforms.waterMap = uniforms.waterMap
     shader.uniforms.uTime = uniforms.uTime
@@ -261,9 +261,9 @@ export const Terrain = () => {
     
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>\n${waterSideFragmentChunks.common}`)
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n${waterSideFragmentChunks.color}`)
-  }
+  }, [uniforms])
 
-  const onBeforeCompileWater = (shader: THREE.ShaderLibShader) => {
+  const onBeforeCompileWater = useCallback((shader: THREE.ShaderLibShader) => {
     shader.uniforms.uTerrainSurface = uniforms.uTerrainSurface
     shader.uniforms.waterMap = uniforms.waterMap
     shader.uniforms.uTime = uniforms.uTime
@@ -275,37 +275,7 @@ export const Terrain = () => {
     
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>\n${waterSurfaceFragmentChunks.common}`)
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n${waterSurfaceFragmentChunks.color}`)
-  }
-
-
-  const setTextures = useStore((state) => state.setTextures)
-
-  useFrame((state) => {
-    // 1. Run GPU Simulation
-    const currentSeaLevel = SEA_LEVEL + Math.sin(day * 0.5 + gameTime * 0.02) * 0.2
-    
-    // Get current terrain config for inflow
-    const inflow = terrainConfig.getInflow ? terrainConfig.getInflow(gameTime) : 0
-    
-    for (let i = 0; i < 5; i++) { // 5 sub-steps
-      gpuSim.step(rainIntensity, inflow, currentSeaLevel, state.clock.getElapsedTime())
-    }
-
-    // 2. Read back to CPU for entity logic
-    gpuSim.readBack(sWater, gWater, tHeight)
-
-    // 3. Update Uniforms
-    uniforms.waterMap.value = gpuSim.getWaterTexture()
-    uniforms.uTime.value = state.clock.getElapsedTime()
-    
-    if (hoveredCell) {
-        uniforms.uHoveredCell.value.set(hoveredCell.x, hoveredCell.z)
-    } else {
-        uniforms.uHoveredCell.value.set(-1, -1)
-    }
-
-    setTextures(surfaceTex, gpuSim.getWaterTexture() as THREE.DataTexture)
-  })
+  }, [uniforms])
 
   const offset = (GRID_SIZE * TILE_SIZE) / 2
 
@@ -334,83 +304,37 @@ export const Terrain = () => {
         }
       }}
     >
-      <mesh 
-        receiveShadow 
-        castShadow 
-        frustumCulled={false} 
-        position={[0, 0, 0]} 
+      <WaterSimulation 
+        gpuSim={gpuSim}
+        terrainConfig={terrainConfig}
+        uniforms={uniforms}
+        surfaceTex={surfaceTex}
+      />
+
+      <TerrainSurface 
         geometry={staticGeometry}
-        customDepthMaterial={terrainDepthMaterial}
-      >
-        <meshStandardMaterial flatShading onBeforeCompile={onBeforeCompileTerrain} />
-      </mesh>
-      
-      {/* Picking Mesh */}
-      <mesh 
-        layers-mask={1 << PICKING_LAYER}
-        frustumCulled={false} 
-        position={[0, 0, 0]} 
-        geometry={staticGeometry}
-      >
-        <meshBasicMaterial onBeforeCompile={onBeforeCompilePicking} />
-      </mesh>
+        depthMaterial={terrainDepthMaterial}
+        onBeforeCompile={onBeforeCompileTerrain}
+        onBeforeCompilePicking={onBeforeCompilePicking}
+      />
 
-      {/* Water Picking Mesh */}
-      <mesh 
-        layers-mask={1 << PICKING_LAYER}
-        frustumCulled={false} 
-        position={[0, 0, 0]} 
+      <WaterSurface 
         geometry={waterGeometry}
-      >
-        <meshBasicMaterial 
-          onBeforeCompile={onBeforeCompileWaterPicking} 
-          polygonOffset
-          polygonOffsetFactor={-1}
-          polygonOffsetUnits={-1}
-        />
-      </mesh>
+        onBeforeCompile={onBeforeCompileWater}
+        onBeforeCompilePicking={onBeforeCompileWaterPicking}
+      />
 
-      <mesh 
-        receiveShadow 
-        frustumCulled={false} 
-        position={[0, 0, 0]} 
-        geometry={waterGeometry}
-      >
-        <meshStandardMaterial
-          flatShading
-          onBeforeCompile={onBeforeCompileWater}          polygonOffset
-          polygonOffsetFactor={-1}
-          polygonOffsetUnits={-1}
-        />
-      </mesh>
+      <TerrainSides 
+        geometry={sideGeometry}
+        onBeforeCompile={onBeforeCompileSide}
+        offset={offset}
+      />
 
-      {/* Terrain Sides */}
-      <mesh position={[0, 0, -offset]} rotation={[0, Math.PI, 0]} geometry={sideGeometry} frustumCulled={false}>
-        <meshStandardMaterial side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'N')} />
-      </mesh>
-      <mesh position={[0, 0, offset]} rotation={[0, 0, 0]} geometry={sideGeometry} frustumCulled={false}>
-        <meshStandardMaterial side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'S')} />
-      </mesh>
-      <mesh position={[-offset, 0, 0]} rotation={[0, -Math.PI/2, 0]} geometry={sideGeometry} frustumCulled={false}>
-        <meshStandardMaterial side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'W')} />
-      </mesh>
-      <mesh position={[offset, 0, 0]} rotation={[0, Math.PI/2, 0]} geometry={sideGeometry} frustumCulled={false}>
-        <meshStandardMaterial side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileSide(s, 'E')} />
-      </mesh>
-
-      {/* Water Sides */}
-      <mesh position={[0, 0, -offset]} rotation={[0, Math.PI, 0]} geometry={sideGeometry} frustumCulled={false}>
-        <meshStandardMaterial transparent side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileWaterSide(s, 'N')} />
-      </mesh>
-      <mesh position={[0, 0, offset]} rotation={[0, 0, 0]} geometry={sideGeometry} frustumCulled={false}>
-        <meshStandardMaterial transparent side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileWaterSide(s, 'S')} />
-      </mesh>
-      <mesh position={[-offset, 0, 0]} rotation={[0, -Math.PI/2, 0]} geometry={sideGeometry} frustumCulled={false}>
-        <meshStandardMaterial transparent side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileWaterSide(s, 'W')} />
-      </mesh>
-      <mesh position={[offset, 0, 0]} rotation={[0, Math.PI/2, 0]} geometry={sideGeometry} frustumCulled={false}>
-        <meshStandardMaterial transparent side={THREE.DoubleSide} onBeforeCompile={(s) => onBeforeCompileWaterSide(s, 'E')} />
-      </mesh>
+      <WaterSides 
+        geometry={sideGeometry}
+        onBeforeCompile={onBeforeCompileWaterSide}
+        offset={offset}
+      />
     </group>
   )
 }
