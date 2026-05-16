@@ -111,6 +111,9 @@ export const Terrain = () => {
     uLayerColors: { value: layerColors },
     uLayerHighlightColors: { value: layerHighlightColors },
     uHoveredCell: { value: new THREE.Vector2(-1, -1) },
+    uBrushSize: { value: 1.0 },
+    uBrushStrength: { value: 0.5 },
+    uMode: { value: 0 }, // 0: PLAY, 1: EDITOR
     waterMap: { value: null as THREE.Texture | null },
     uTime: { value: 0 },
     uTileSize: { value: TILE_SIZE }
@@ -132,6 +135,9 @@ export const Terrain = () => {
         uTerrainSurface: uniforms.uTerrainSurface,
         uTileSize: uniforms.uTileSize,
         uHoveredCell: uniforms.uHoveredCell,
+        uBrushSize: uniforms.uBrushSize,
+        uBrushStrength: uniforms.uBrushStrength,
+        uMode: uniforms.uMode,
         uLayerColors: uniforms.uLayerColors,
         uLayerHighlightColors: uniforms.uLayerHighlightColors
     })
@@ -195,6 +201,9 @@ export const Terrain = () => {
         waterMap: uniforms.waterMap,
         uTime: uniforms.uTime,
         uHoveredCell: uniforms.uHoveredCell,
+        uBrushSize: uniforms.uBrushSize,
+        uBrushStrength: uniforms.uBrushStrength,
+        uMode: uniforms.uMode,
         uLayerHighlightColors: uniforms.uLayerHighlightColors
     })
   }, [uniforms])
