@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background: Water Blue Base -->
+  <rect width="512" height="512" fill="#4a90e2" />
+  
+  <!-- Subtle Low-Poly Terrain Pattern -->
+  <g opacity="0.8">
+    <!-- Green Terrain Shapes -->
+    <path d="M0 0 L300 0 L150 200 Z" fill="#4a704a" />
+    <path d="M512 0 L200 0 L350 150 Z" fill="#3d5c3d" />
+    <path d="M0 512 L250 512 L100 350 Z" fill="#588558" />
+    <path d="M512 512 L300 512 L450 400 Z" fill="#436543" />
+    
+    <!-- Sand/Beach Highlights -->
+    <path d="M150 200 L350 150 L250 300 Z" fill="#d4c29d" fill-opacity="0.6" />
+    <path d="M100 350 L250 300 L300 450 Z" fill="#c4b28d" fill-opacity="0.5" />
+    <path d="M450 400 L350 150 L512 250 Z" fill="#e4d2ad" fill-opacity="0.4" />
+    
+    <!-- Quads (represented as two triangles) -->
+    <path d="M0 200 L150 200 L100 350 L0 350 Z" fill="#4a704a" fill-opacity="0.9" />
+  </g>
+
+  <!-- High-contrast White Text Branding -->
+  <!-- Subtle drop shadow for depth and separation -->
+  <text 
+    x="50.5%" 
+    y="50.5%" 
+    dominant-baseline="central" 
+    text-anchor="middle" 
+    font-family="Arial, sans-serif" 
+    font-weight="900" 
+    font-size="340" 
+    fill="black"
+    fill-opacity="0.2"
+  >D²</text>
+  <text 
+    x="50%" 
+    y="50%" 
+    dominant-baseline="central" 
+    text-anchor="middle" 
+    font-family="Arial, sans-serif" 
+    font-weight="900" 
+    font-size="340" 
+    fill="white"
+  >D²</text>
+</svg>
