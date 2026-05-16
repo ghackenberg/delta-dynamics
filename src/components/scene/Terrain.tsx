@@ -45,10 +45,12 @@ export const Terrain = () => {
   const [isPainting, setIsPainting] = useState(false)
   const [isErasing, setIsErasing] = useState(false)
 
+  const setEditorInteracting = useStore((state) => state.setEditorInteracting)
+
   // Sync with global store for camera control management
   useEffect(() => {
-    useStore.setState({ isEditorInteracting: isCtrlPressed && (isPainting || isErasing) })
-  }, [isPainting, isErasing, isCtrlPressed])
+    setEditorInteracting(isCtrlPressed && (isPainting || isErasing))
+  }, [isPainting, isErasing, isCtrlPressed, setEditorInteracting])
 
   // Continuous painting in editor mode
   useFrame(() => {
@@ -276,6 +278,8 @@ export const Terrain = () => {
   }
 
 
+  const setTextures = useStore((state) => state.setTextures)
+
   useFrame((state) => {
     // 1. Run GPU Simulation
     const currentSeaLevel = SEA_LEVEL + Math.sin(day * 0.5 + gameTime * 0.02) * 0.2
@@ -300,7 +304,7 @@ export const Terrain = () => {
         uniforms.uHoveredCell.value.set(-1, -1)
     }
 
-    useStore.setState({ heightTexture: surfaceTex, waterTexture: gpuSim.getWaterTexture() as THREE.DataTexture })
+    setTextures(surfaceTex, gpuSim.getWaterTexture() as THREE.DataTexture)
   })
 
   const offset = (GRID_SIZE * TILE_SIZE) / 2

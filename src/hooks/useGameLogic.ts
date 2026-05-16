@@ -6,11 +6,12 @@ export const useGameLogic = () => {
   const simulationSpeed = useStore((state) => state.simulationSpeed)
   
   useEffect(() => {
+    const setCtrlPressed = useStore.getState().setCtrlPressed
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Control') useStore.setState({ isCtrlPressed: true })
+      if (e.key === 'Control') setCtrlPressed(true)
     }
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Control') useStore.setState({ isCtrlPressed: false })
+      if (e.key === 'Control') setCtrlPressed(false)
     }
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
