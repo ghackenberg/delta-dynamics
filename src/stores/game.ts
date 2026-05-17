@@ -14,7 +14,8 @@ import {
   TILE_SIZE, 
   BOUNDARY, 
   INITIAL_RESOURCES, 
-  BUILDING_SIZES 
+  BUILDING_SIZES,
+  MAX_TREES
 } from '../constants/gameConfig'
 import { gridToWorld } from '../utils/gameUtils'
 import { generateInitialTerrain, paintArea, isAreaFlat } from '../systems/terrainSystem'
@@ -342,16 +343,118 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
   }),
 
   paintTerrain: (xIndex, zIndex, isErase) => set((state) => {
+    const radius = state.editorBrushSize
+    const startI = Math.max(0, xIndex - radius - 1)
+    const endI = Math.min(GRID_SIZE - 1, xIndex + radius)
+    const startJ = Math.max(0, zIndex - radius - 1)
+    const endJ = Math.min(GRID_SIZE - 1, zIndex + radius)
+
+    // Snapshot of humus state before painting
+    const wasHumus = new Uint8Array((endI - startI + 1) * (endJ - startJ + 1))
+    for (let i = startI; i <= endI; i++) {
+      for (let j = startJ; j <= endJ; j++) {
+        let isHumus = true
+        for (let di = 0; di <= 1; di++) {
+          for (let dj = 0; dj <= 1; dj++) {
+            const v = state.terrainVertices[Math.min(GRID_SIZE, i + di)][Math.min(GRID_SIZE, j + dj)]
+            if (v[v.length - 1]?.type !== 'HUMUS') {
+              isHumus = false
+              break
+            }
+          }
+          if (!isHumus) break
+        }
+        if (isHumus) wasHumus[(i - startI) * (endJ - startJ + 1) + (j - startJ)] = 1
+      }
+    }
+
     const changed = paintArea(
       state.terrainVertices,
       xIndex, zIndex,
-      state.editorBrushSize,
+      radius,
       state.editorLayerType,
       isErase ? -state.editorBrushStrength : state.editorBrushStrength,
       state
     )
+
     if (changed) {
-      return { terrainVersion: state.terrainVersion + 1 }
+      const { buildings, occupancyGrid, terrainVertices, sWater } = state
+      const idsToRemove = new Set<string>()
+      const treesToAdd: BuildingInstance[] = []
+      const newOccupancy = [...occupancyGrid]
+      let treeUpdateChanged = false
+
+      const buildingMap = new Map(buildings.map(b => [b.id, b]))
+      let maxPickingId = buildings.reduce((max, b) => Math.max(max, b.pickingId || 0), 0)
+
+      for (let i = startI; i <= endI; i++) {
+        let rowChanged = false
+        const currentRow = [...newOccupancy[i]]
+        for (let j = startJ; j <= endJ; j++) {
+          let isHumus = true
+          for (let di = 0; di <= 1; di++) {
+            for (let dj = 0; dj <= 1; dj++) {
+              const vi = Math.min(GRID_SIZE, i + di)
+              const vj = Math.min(GRID_SIZE, j + dj)
+              const v = terrainVertices[vi][vj]
+              if (v[v.length - 1]?.type !== 'HUMUS') {
+                isHumus = false
+                break
+              }
+            }
+            if (!isHumus) break
+          }
+
+          const buildingId = currentRow[j]
+          const wasH = wasHumus[(i - startI) * (endJ - startJ + 1) + (j - startJ)] === 1
+
+          if (buildingId) {
+            const building = buildingMap.get(buildingId)
+            const isTree = building && ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(building.type)
+            if (isTree && !isHumus) {
+              idsToRemove.add(buildingId)
+              currentRow[j] = null
+              rowChanged = true
+            }
+          } else if (isHumus && !wasH && sWater[j * GRID_SIZE + i] <= 0.05 && (buildings.length - idsToRemove.size + treesToAdd.length) < MAX_TREES) {
+            if (Math.random() < 0.02) {
+              const type = (['TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'] as const)[Math.floor(Math.random() * 3)]
+              maxPickingId++
+              const id = Math.random().toString(36).substr(2, 9)
+              const newB: BuildingInstance = {
+                id,
+                pickingId: maxPickingId,
+                type,
+                level: 1,
+                progress: 100,
+                isReady: true,
+                assignedWorkers: [],
+                x: i,
+                z: j,
+                width: 1,
+                height: 1
+              }
+              treesToAdd.push(newB)
+              currentRow[j] = id
+              rowChanged = true
+            }
+          }
+        }
+        if (rowChanged) {
+          newOccupancy[i] = currentRow
+          treeUpdateChanged = true
+        }
+      }
+
+      const finalBuildings = treeUpdateChanged 
+        ? buildings.filter(b => !idsToRemove.has(b.id)).concat(treesToAdd)
+        : state.buildings
+
+      return { 
+        terrainVersion: state.terrainVersion + 1,
+        buildings: finalBuildings,
+        occupancyGrid: treeUpdateChanged ? newOccupancy : state.occupancyGrid
+      }
     }
     return state
   }),
