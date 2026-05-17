@@ -4,11 +4,13 @@ export const waterSurfaceFragmentModule: ShaderModule = {
     name: 'waterSurfaceFragment',
     fragment: {
         common: `
+            uniform sampler2D uTerrainSurface;
             uniform sampler2D waterMap;
             uniform vec2 uHoveredCell;
             uniform float uBrushSize;
             uniform float uBrushStrength;
             uniform int uMode;
+            uniform vec3 uLayerColors[6];
             uniform vec3 uLayerHighlightColors[6];
             varying float vDepth;
             varying vec2 vGridUv;
@@ -43,9 +45,16 @@ export const waterSurfaceFragmentModule: ShaderModule = {
                 }
             }
 
+            // Get local terrain color for smooth edge blending
+            vec2 texRes = vec2(101.0);
+            vec2 cellCoord = clamp(floor(vGridUv * gridRes), 0.0, 99.0);
+            float cellType = texture2D(uTerrainSurface, (cellCoord + 0.5) / texRes).b;
+            vec3 terrainColor = uLayerColors[int(cellType + 0.5)];
+
             // Crisp shoreline contour at terrain intersection
-            float shoreLine = 1.0 - smoothstep(0.0, 0.03, vDepth);
-            waterColor = mix(waterColor, vec3(1.0), shoreLine * 0.8);
+            // Instead of white, we fade into the terrain color for a "wet edge" look
+            float shoreLine = 1.0 - smoothstep(0.0, 0.04, vDepth);
+            waterColor = mix(waterColor, terrainColor * 0.8, shoreLine * 0.9);
             
             // Subtle flow/grid lines
             vec2 grid = fract(vGridUv * 100.0);

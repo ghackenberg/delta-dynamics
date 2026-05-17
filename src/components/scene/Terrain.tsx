@@ -205,6 +205,7 @@ export const Terrain = () => {
         uBrushSize: uniforms.uBrushSize,
         uBrushStrength: uniforms.uBrushStrength,
         uMode: uniforms.uMode,
+        uLayerColors: uniforms.uLayerColors,
         uLayerHighlightColors: uniforms.uLayerHighlightColors
     })
   }, [uniforms])
