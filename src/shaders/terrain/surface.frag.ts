@@ -1,10 +1,13 @@
+import { BILINEAR_GLSL } from '../shared/bilinear'
 import type { ShaderModule } from '../../utils/shaderUtils'
 
 export const terrainSurfaceFragmentModule: ShaderModule = {
     name: 'terrainSurfaceFragment',
     fragment: {
         common: `
+            ${BILINEAR_GLSL}
             uniform sampler2D uTerrainSurface;
+            uniform sampler2D waterMap;
             uniform vec2 uHoveredCell;
             uniform float uBrushSize;
             uniform float uBrushStrength;
@@ -19,10 +22,26 @@ export const terrainSurfaceFragmentModule: ShaderModule = {
             vec2 gridRes = vec2(100.0);
             vec2 texRes = vec2(101.0);
             vec2 cellCoord = clamp(floor(vGridUv * gridRes), 0.0, 99.0);
-            float cellType = texture2D(uTerrainSurface, (cellCoord + 0.5) / texRes).b;
+            vec4 surfaceData = texture2D(uTerrainSurface, (cellCoord + 0.5) / texRes);
+            float cellType = surfaceData.b;
             
             int typeIdx = int(cellType + 0.5);
             vec3 terrainColor = uLayerColors[typeIdx];
+
+            // Smooth Saturation Transition
+            // We interpolate both groundwater and capacity for a smooth visual result
+            vec4 smoothSurfaceData = bilinear(uTerrainSurface, vGridUv, texRes);
+            float aCapSmooth = smoothSurfaceData.a;
+            
+            vec4 smoothWaterData = bilinear(waterMap, vGridUv, gridRes);
+            float gWaterSmooth = smoothWaterData.g;
+            
+            float saturation = aCapSmooth > 0.0 ? clamp(gWaterSmooth / aCapSmooth, 0.0, 1.0) : 0.0;
+            
+            // Darkening effect: wet soil/gravel looks darker
+            // Apply a darkening factor based on saturation (up to 60% darker)
+            float darkeningFactor = 1.0 - (saturation * 0.6);
+            terrainColor *= darkeningFactor;
             
             // Hover Highlight (Inverted Y to match picking)
             vec2 gridCell = floor(vGridUv * gridRes);
