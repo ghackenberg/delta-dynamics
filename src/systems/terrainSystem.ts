@@ -227,3 +227,57 @@ export const paintArea = (
 
   return changed
 }
+
+/**
+ * Computes adaptive indices for a grid based on vertex heights.
+ * Picks the diagonal with the smaller height difference to avoid "spiking" artifacts.
+ */
+export const computeAdaptiveIndices = (vertices: TerrainVertex[][]): Uint32Array => {
+  const indices = new Uint32Array(GRID_SIZE * GRID_SIZE * 6)
+  let ptr = 0
+
+  for (let j = 0; j < GRID_SIZE; j++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
+      // Vertex indices in the PlaneGeometry grid (which is (GRID_SIZE+1) x (GRID_SIZE+1))
+      // PlaneGeometry standard indexing: row by row, from top-left.
+      // But our rotateX(-Math.PI/2) and vertex height mapping might have different orientation.
+      // PlaneGeometry(w, h, sw, sh) vertices:
+      // index = y * (sw + 1) + x
+      
+      const v00 = j * (GRID_SIZE + 1) + i
+      const v10 = j * (GRID_SIZE + 1) + (i + 1)
+      const v01 = (j + 1) * (GRID_SIZE + 1) + i
+      const v11 = (j + 1) * (GRID_SIZE + 1) + (i + 1)
+
+      const h00 = getVertexTotalHeight(vertices[i][j])
+      const h10 = getVertexTotalHeight(vertices[i + 1][j])
+      const h01 = getVertexTotalHeight(vertices[i][j + 1])
+      const h11 = getVertexTotalHeight(vertices[i + 1][j + 1])
+
+      const diff00_11 = Math.abs(h00 - h11)
+      const diff10_01 = Math.abs(h10 - h01)
+
+      if (diff00_11 < diff10_01) {
+        // Diagonal v00 -> v11
+        indices[ptr++] = v00
+        indices[ptr++] = v01
+        indices[ptr++] = v11
+        
+        indices[ptr++] = v00
+        indices[ptr++] = v11
+        indices[ptr++] = v10
+      } else {
+        // Diagonal v10 -> v01
+        indices[ptr++] = v00
+        indices[ptr++] = v01
+        indices[ptr++] = v10
+        
+        indices[ptr++] = v01
+        indices[ptr++] = v11
+        indices[ptr++] = v10
+      }
+    }
+  }
+
+  return indices
+}

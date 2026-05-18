@@ -22,6 +22,7 @@ import { createWaterSideVertexModule } from '../../shaders/water/side.vert'
 import { waterSideFragmentModule } from '../../shaders/water/side.frag'
 import { applyModulesToShader, type Shader } from '../../utils/shaderUtils'
 import { TerrainManager } from '../../managers/TerrainManager'
+import { computeAdaptiveIndices } from '../../systems/terrainSystem'
 
 import { WaterSimulation } from './terrain/WaterSimulation'
 import { TerrainSurface } from './terrain/TerrainSurface'
@@ -125,9 +126,11 @@ export const Terrain = () => {
     return geo
   }, [])
 
-  const waterGeometry = useMemo(() => {
-    return staticGeometry.clone().toNonIndexed()
-  }, [staticGeometry])
+  // Update geometry indices based on adaptive triangulation
+  useEffect(() => {
+    const indices = computeAdaptiveIndices(terrainVertices)
+    staticGeometry.setIndex(new THREE.BufferAttribute(indices, 1))
+  }, [terrainVersion, terrainVertices, staticGeometry])
 
   const onBeforeCompileTerrain = useCallback((shader: Shader) => {
     applyModulesToShader(shader, [terrainSurfaceVertexModule, terrainSurfaceFragmentModule], {
@@ -252,7 +255,7 @@ export const Terrain = () => {
       />
 
       <WaterSurface 
-        geometry={waterGeometry}
+        geometry={staticGeometry}
         onBeforeCompile={onBeforeCompileWater}
         onBeforeCompilePicking={onBeforeCompileWaterPicking}
       />
