@@ -99,7 +99,7 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
           <div className="flex items-center gap-3">
             <img src="/icon.svg" alt="Delta Dynamics" className="w-10 h-10 rounded-lg shadow-2xl border border-white/5" />
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-orange-500 font-black">Delta Dynamics</span>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-white font-black">Delta Dynamics</span>
               <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Colony Simulator</span>
             </div>
           </div>
