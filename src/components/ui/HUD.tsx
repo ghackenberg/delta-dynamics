@@ -465,11 +465,24 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
                         return (
                           <div key={idx} className="bg-white/5 rounded-lg p-3 border border-white/5 flex flex-col gap-1">
                             <div className="flex justify-between items-center">
-                              <span className="text-xs text-white/80 font-bold">{layer.type}</span>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-2 h-2 rounded-full border border-white/20 shadow-sm" 
+                                  style={{ backgroundColor: MATERIAL_PROPERTIES[layer.type].color }} 
+                                />
+                                <span className="text-xs text-white/80 font-bold">{layer.type}</span>
+                              </div>
                               <span className="text-[10px] text-white/40 font-mono">{layer.thickness.toFixed(2)}m</span>
                             </div>
                             <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                              <div className="h-full bg-white/10" style={{ width: `${(layer.thickness / 5) * 100}%` }} />
+                              <div 
+                                className="h-full" 
+                                style={{ 
+                                  width: `${(layer.thickness / 5) * 100}%`,
+                                  backgroundColor: MATERIAL_PROPERTIES[layer.type].color,
+                                  opacity: 0.6
+                                }} 
+                              />
                             </div>
                           </div>
                         )
