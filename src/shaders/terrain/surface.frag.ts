@@ -12,6 +12,7 @@ export const terrainSurfaceFragmentModule: ShaderModule = {
             uniform float uBrushSize;
             uniform float uBrushStrength;
             uniform int uMode;
+            uniform float uTime;
             uniform vec3 uLayerColors[6];
             uniform vec3 uLayerHighlightColors[6];
             varying float vType;
@@ -24,9 +25,32 @@ export const terrainSurfaceFragmentModule: ShaderModule = {
             vec2 cellCoord = clamp(floor(vGridUv * gridRes), 0.0, 99.0);
             vec4 surfaceData = texture2D(uTerrainSurface, (cellCoord + 0.5) / texRes);
             float cellType = surfaceData.b;
+            float rl = surfaceData.g;
             
             int typeIdx = int(cellType + 0.5);
             vec3 terrainColor = uLayerColors[typeIdx];
+
+            // Source/Sink Highlight (Energy Pulse)
+            if (rl > 0.5) {
+                float pulse = 0.5 + 0.5 * sin(uTime * 3.0);
+                if (rl < 1.5) { // Source: Cyan/Blue Pulse
+                    terrainColor = mix(terrainColor, vec3(0.0, 0.8, 1.0), pulse * 0.4);
+                } else if (rl < 2.5) { // Sink: Red/Orange Pulse
+                    terrainColor = mix(terrainColor, vec3(1.0, 0.2, 0.0), pulse * 0.4);
+                }
+            } else {
+                // Boundary Sink Highlight (if sw > 0 on edge)
+                vec2 uv = vGridUv;
+                vec2 texel = 1.0 / gridRes;
+                if (uv.x < texel.x || uv.x > 1.0 - texel.x || uv.y < texel.y || uv.y > 1.0 - texel.y) {
+                    vec4 waterData = texture2D(waterMap, uv);
+                    float sw = waterData.b;
+                    if (sw > 0.01) {
+                        float pulse = 0.5 + 0.5 * sin(uTime * 3.0);
+                        terrainColor = mix(terrainColor, vec3(1.0, 0.2, 0.0), pulse * 0.3);
+                    }
+                }
+            }
 
             // Smooth Saturation Transition
             // We interpolate both groundwater and capacity for a smooth visual result

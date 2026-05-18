@@ -10,6 +10,7 @@ export const waterSurfaceFragmentModule: ShaderModule = {
             uniform float uBrushSize;
             uniform float uBrushStrength;
             uniform int uMode;
+            uniform float uTime;
             uniform vec3 uLayerColors[6];
             uniform vec3 uLayerHighlightColors[6];
             varying float vDepth;
@@ -27,6 +28,8 @@ export const waterSurfaceFragmentModule: ShaderModule = {
             
             // Hover Highlight
             vec2 gridRes = vec2(100.0);
+            vec2 texRes = vec2(101.0);
+            vec2 cellCoord = clamp(floor(vGridUv * gridRes), 0.0, 99.0);
             vec2 gridCell = floor(vGridUv * gridRes);
             vec2 currentCell = vec2(gridCell.x, gridRes.y - 1.0 - gridCell.y);
             float dist = distance(currentCell, uHoveredCell);
@@ -45,11 +48,31 @@ export const waterSurfaceFragmentModule: ShaderModule = {
                 }
             }
 
-            // Get local terrain color for smooth edge blending
-            vec2 texRes = vec2(101.0);
-            vec2 cellCoord = clamp(floor(vGridUv * gridRes), 0.0, 99.0);
-            float cellType = texture2D(uTerrainSurface, (cellCoord + 0.5) / texRes).b;
+            vec4 surfaceData = texture2D(uTerrainSurface, (cellCoord + 0.5) / texRes);
+            float cellType = surfaceData.b;
+            float rl = surfaceData.g;
             vec3 terrainColor = uLayerColors[int(cellType + 0.5)];
+
+            // Source/Sink Highlight (Energy Pulse) on Water
+            if (rl > 0.5) {
+                float pulse = 0.5 + 0.5 * sin(uTime * 3.0);
+                if (rl < 1.5) { // Source: Cyan/Blue Pulse
+                    waterColor = mix(waterColor, vec3(0.0, 0.8, 1.0), pulse * 0.4);
+                } else if (rl < 2.5) { // Sink: Red/Orange Pulse
+                    waterColor = mix(waterColor, vec3(1.0, 0.2, 0.0), pulse * 0.4);
+                }
+            } else {
+                // Boundary Sink Highlight
+                vec2 uv = vGridUv;
+                vec2 texel = 1.0 / gridRes;
+                if (uv.x < texel.x || uv.x > 1.0 - texel.x || uv.y < texel.y || uv.y > 1.0 - texel.y) {
+                    float sw = waterData.b;
+                    if (sw > 0.01) {
+                        float pulse = 0.5 + 0.5 * sin(uTime * 3.0);
+                        waterColor = mix(waterColor, vec3(1.0, 0.2, 0.0), pulse * 0.3);
+                    }
+                }
+            }
 
             // Crisp shoreline contour at terrain intersection
             // Instead of white, we fade into the terrain color for a "wet edge" look

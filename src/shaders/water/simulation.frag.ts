@@ -110,10 +110,13 @@ export const waterSimulationFragmentModule: ShaderModule = {
                     }
                 }
 
-                // Source logic
+                // Source and Sink logic
                 if (rl > 0.5 && rl < 1.5) { // rl == 1.0 is Source
                     sw += uInflow;
                     gw = ac; // Keep ground saturated at sources
+                } else if (rl > 1.5 && rl < 2.5) { // rl == 2.0 is Sink
+                    sw *= 0.8; // Drain surface water
+                    gw *= 0.8; // Drain ground water
                 }
 
                 // Apply deltas
