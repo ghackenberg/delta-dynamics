@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
+import { useMemo } from 'react'
 import * as THREE from 'three'
-import { SEA_LEVEL } from '../../../constants/gameConfig'
+import { SEA_LEVEL, GRID_SIZE } from '../../../constants/gameConfig'
 import { WaterComputeSystem } from '../../../systems/waterSystem'
 import { useStore } from '../../../hooks/useStore'
 import type { TerrainConfig, GameMode } from '../../../types/game'
@@ -60,18 +61,36 @@ export const WaterSimulation = ({
   const mode = useStore((state) => state.mode)
   const brushSize = useStore((state) => state.editorBrushSize)
   const brushStrength = useStore((state) => state.editorBrushStrength)
+  const isEditorInteracting = useStore((state) => state.isEditorInteracting)
+  const editorLayerType = useStore((state) => state.editorLayerType)
+
+  const rainBrushPos = useMemo(() => new THREE.Vector2(), [])
 
   useFrame((state) => {
-    // 1. Run GPU Simulation
-    const currentSeaLevel = SEA_LEVEL + Math.sin(day * 0.5 + gameTime * 0.02) * 0.2
-    
-    // Get current terrain config for inflow
-    const inflow = terrainConfig.getInflow ? terrainConfig.getInflow(gameTime) : 0
-    
-    for (let i = 0; i < 5; i++) { // 5 sub-steps
-      gpuSim.step(rainIntensity, inflow, currentSeaLevel, state.clock.getElapsedTime())
-    }
+      // 1. Run GPU Simulation
+      const currentSeaLevel = SEA_LEVEL + Math.sin(day * 0.5 + gameTime * 0.02) * 0.2
 
+      // Get current terrain config for inflow
+      const inflow = terrainConfig.getInflow ? terrainConfig.getInflow(gameTime) : 0
+
+      const isRainPainting = mode === 'EDITOR' && isEditorInteracting && editorLayerType === 'RAIN'
+      if (isRainPainting && hoveredCell) {
+          rainBrushPos.set(hoveredCell.x, GRID_SIZE - 1 - hoveredCell.z)
+      } else {
+          rainBrushPos.set(-1, -1)
+      }
+
+      for (let i = 0; i < 5; i++) { // 5 sub-steps
+          gpuSim.step(
+              rainIntensity, 
+              inflow, 
+              currentSeaLevel, 
+              state.clock.getElapsedTime(),
+              rainBrushPos,
+              brushSize,
+              brushStrength
+          )
+      }
     // 2. Read back to CPU for entity logic
     gpuSim.readBack(sWater, gWater, tHeight)
 

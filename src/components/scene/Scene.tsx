@@ -1,6 +1,7 @@
 import { MapControls, ContactShadows, Environment } from '@react-three/drei'
 import { GameGrid } from './GameGrid'
 import { Terrain } from './Terrain'
+import { RainEffect } from './RainEffect'
 import { DayNightCycle } from './DayNightCycle'
 import { PickingSystem } from './PickingSystem'
 import { PerformanceSystem } from './PerformanceSystem'
@@ -46,6 +47,7 @@ export const Scene = () => {
 
       <Terrain />
       <GameGrid />
+      <RainEffect />
 
       <ContactShadows position={[0, -2, 0]} opacity={0.4} scale={40} blur={2} far={10} />
       <Environment preset="city" />

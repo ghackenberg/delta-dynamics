@@ -52,6 +52,9 @@ export class WaterComputeSystem {
                 uTerrainSurface: { value: this.terrainSurfaceTexture },
                 uLayerPermeability: { value: new Float32Array(6) },
                 uRain: { value: 0 },
+                uRainBrushPos: { value: new THREE.Vector2(-1, -1) },
+                uRainBrushSize: { value: 0 },
+                uRainBrushIntensity: { value: 0 },
                 uInflow: { value: 0 },
                 uSeaLevel: { value: -0.8 },
                 uTime: { value: 0 },
@@ -163,12 +166,18 @@ export class WaterComputeSystem {
         this.terrainSurfaceTexture.needsUpdate = true
     }
 
-    public step(rain: number, inflow: number, seaLevel: number, time: number) {
+    public step(rain: number, inflow: number, seaLevel: number, time: number, rainBrushPos?: THREE.Vector2, rainBrushSize?: number, rainBrushIntensity?: number) {
         this.computeMaterial.uniforms.uWater.value = this.renderTargetA.texture
         this.computeMaterial.uniforms.uRain.value = rain
         this.computeMaterial.uniforms.uInflow.value = inflow
         this.computeMaterial.uniforms.uSeaLevel.value = seaLevel
         this.computeMaterial.uniforms.uTime.value = time
+
+        if (rainBrushPos) this.computeMaterial.uniforms.uRainBrushPos.value.copy(rainBrushPos)
+        else this.computeMaterial.uniforms.uRainBrushPos.value.set(-1, -1)
+        
+        if (rainBrushSize !== undefined) this.computeMaterial.uniforms.uRainBrushSize.value = rainBrushSize
+        if (rainBrushIntensity !== undefined) this.computeMaterial.uniforms.uRainBrushIntensity.value = rainBrushIntensity
 
         const prevTarget = this.renderer.getRenderTarget()
         this.renderer.setRenderTarget(this.renderTargetB)

@@ -56,6 +56,19 @@ export const Terrain = () => {
     setEditorInteracting(isCtrlPressed && (isPainting || isErasing))
   }, [isPainting, isErasing, isCtrlPressed, setEditorInteracting])
 
+  // Handle global mouse up to stop painting/erasing even if mouse is outside the terrain
+  useEffect(() => {
+    if (!isPainting && !isErasing) return
+
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      if (e.button === 0) setIsPainting(false)
+      if (e.button === 2) setIsErasing(false)
+    }
+
+    window.addEventListener('mouseup', handleGlobalMouseUp)
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp)
+  }, [isPainting, isErasing])
+
   // Continuous painting in editor mode
   useFrame(() => {
     if (mode === 'EDITOR' && isCtrlPressed && (isPainting || isErasing) && hoveredCell) {
@@ -231,12 +244,6 @@ export const Terrain = () => {
         if (mode === 'EDITOR') {
           if (e.button === 0) setIsPainting(false)
           if (e.button === 2) setIsErasing(false)
-        }
-      }}
-      onPointerLeave={() => {
-        if (mode === 'EDITOR') {
-          setIsPainting(false)
-          setIsErasing(false)
         }
       }}
     >

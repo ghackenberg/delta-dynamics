@@ -14,6 +14,9 @@ export const waterSimulationFragmentModule: ShaderModule = {
             uniform sampler2D uTerrainSurface; // R: height, G: rLevel, B: topType, A: aCap
             uniform float uLayerPermeability[6];
             uniform float uRain;
+            uniform vec2 uRainBrushPos;
+            uniform float uRainBrushSize;
+            uniform float uRainBrushIntensity;
             uniform float uInflow;
             uniform float uSeaLevel;
             uniform float uTime;
@@ -85,6 +88,15 @@ export const waterSimulationFragmentModule: ShaderModule = {
 
                 // Rain
                 sw += uRain * 0.0005;
+
+                // Local Rain Brush
+                if (uRainBrushPos.x >= 0.0) {
+                    float dist = distance(uv * uResolution, uRainBrushPos);
+                    if (dist < uRainBrushSize) {
+                        float force = 1.0 - (dist / uRainBrushSize);
+                        sw += uRainBrushIntensity * force * 0.01;
+                    }
+                }
 
                 // Boundary / Sea Level
                 if (uv.x < texel.x || uv.x > 1.0 - texel.x || uv.y < texel.y || uv.y > 1.0 - texel.y) {

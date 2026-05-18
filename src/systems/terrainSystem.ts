@@ -187,6 +187,7 @@ export const paintArea = (
   strength: number,
   state: Partial<GameState>
 ): boolean => {
+  if (type === 'RAIN') return false
   let changed = false
   const sigma = radius / 2
   const sigma2 = 2 * sigma * sigma
