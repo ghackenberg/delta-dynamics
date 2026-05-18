@@ -9,9 +9,12 @@ export const treeSurfaceVertexModule: ShaderModule = {
             uniform float uTime;
             uniform float uGridSize;
             attribute float aSink;
+            attribute float aPickingId;
+            varying float vPickingId;
             ${BILINEAR_GLSL}
         `,
         begin: `
+            vPickingId = aPickingId;
             // Instance world position (xz only)
             vec4 instPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
             

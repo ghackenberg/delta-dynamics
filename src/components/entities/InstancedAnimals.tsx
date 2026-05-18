@@ -17,6 +17,7 @@ for (let i = 0; i < MAX_ANIMALS; i++) {
 export const InstancedAnimals = () => {
   const animals = useStore((state) => state.animals)
   const heightTexture = useStore((state) => state.heightTexture)
+  const hoveredEntityId = useStore((state) => state.hoveredEntityId)
   const mode = useStore((state) => state.mode)
   const isPickable = mode === 'PLAY'
   
@@ -28,17 +29,26 @@ export const InstancedAnimals = () => {
 
   const manager = useMemo(() => new AnimalManager(null), [])
 
-  const randomAttr = useMemo(() => {
-    return new THREE.InstancedBufferAttribute(STATIC_RANDOM_VALUES, 1)
-  }, [])
+  useEffect(() => {
+    const hoveredAnimal = animals.find(a => a.id === hoveredEntityId)
+    manager.updateHoveredEntity(hoveredAnimal ? (hoveredAnimal.pickingId || 0) : null)
+  }, [manager, animals, hoveredEntityId])
 
-  const animalGeo = useMemo(() => {
+  const deerGeo = useMemo(() => {
     const geo = new THREE.BoxGeometry(0.5, 0.5, 1.0)
     geo.translate(0, 0.25, 0)
-    geo.setAttribute('aRandom', randomAttr)
+    geo.setAttribute('aRandom', new THREE.InstancedBufferAttribute(STATIC_RANDOM_VALUES, 1))
     geo.setAttribute('aPickingId', new THREE.InstancedBufferAttribute(new Float32Array(MAX_ANIMALS), 1))
     return geo
-  }, [randomAttr])
+  }, [])
+
+  const wolfGeo = useMemo(() => {
+    const geo = new THREE.BoxGeometry(0.5, 0.5, 1.0)
+    geo.translate(0, 0.25, 0)
+    geo.setAttribute('aRandom', new THREE.InstancedBufferAttribute(STATIC_RANDOM_VALUES, 1))
+    geo.setAttribute('aPickingId', new THREE.InstancedBufferAttribute(new Float32Array(MAX_ANIMALS), 1))
+    return geo
+  }, [])
 
   useEffect(() => {
     manager.updateHeightTexture(heightTexture)
@@ -66,18 +76,18 @@ export const InstancedAnimals = () => {
 
   return (
     <group>
-      <instancedMesh ref={deerRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
+      <instancedMesh ref={deerRef} args={[deerGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
         <primitive object={manager.materials.deer} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={wolfRef} args={[animalGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
+      <instancedMesh ref={wolfRef} args={[wolfGeo, undefined, MAX_ANIMALS]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
         <primitive object={manager.materials.wolf} attach="material" />
       </instancedMesh>
 
       {/* Picking Meshes */}
-      <instancedMesh ref={deerPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
+      <instancedMesh ref={deerPickingRef} args={[deerGeo, undefined, MAX_ANIMALS]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
         <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={wolfPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
+      <instancedMesh ref={wolfPickingRef} args={[wolfGeo, undefined, MAX_ANIMALS]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
         <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
     </group>

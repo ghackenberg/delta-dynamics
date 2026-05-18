@@ -8,6 +8,7 @@ import { useStore } from '../../hooks/useStore'
 import { getInterpolatedHeight } from '../../systems/terrainSystem'
 
 interface HumanProps {
+  id: string
   pickingId?: number
   position: [number, number]
   rotation: number
@@ -17,10 +18,12 @@ interface HumanProps {
   outfitColor: string
 }
 
-export const Human = ({ pickingId, position, rotation, state, name, color, outfitColor }: HumanProps) => {
+export const Human = ({ id, pickingId, position, rotation, state, name, color, outfitColor }: HumanProps) => {
   const meshRef = useRef<THREE.Group>(null!)
   const terrainVertices = useStore(state => state.terrainVertices)
-  
+  const hoveredEntityId = useStore(state => state.hoveredEntityId)
+  const isHovered = id === hoveredEntityId
+
   const gridX = (position[0] + BOUNDARY) / TILE_SIZE
   const gridZ = (position[1] + BOUNDARY) / TILE_SIZE
   const yPos = getInterpolatedHeight(terrainVertices, gridX, gridZ)
@@ -32,11 +35,14 @@ export const Human = ({ pickingId, position, rotation, state, name, color, outfi
   const actualSkinColor = state === 'SLEEPING' ? '#555' : color
 
   const pickingColor = useMemo(() => {
-    const id = (pickingId || 0) + 1 // Offset by 1
-    const r = Math.floor(id / 256) / 255
-    const g = (id % 256) / 255
+    const idVal = (pickingId || 0) + 1 // Offset by 1
+    const r = Math.floor(idVal / 256) / 255
+    const g = (idVal % 256) / 255
     return new THREE.Color(r, g, 254 / 255) // b=254 for humans
   }, [pickingId])
+
+  const emissiveIntensity = isHovered ? 0.2 : 0
+  const emissiveColor = isHovered ? new THREE.Color(0.2, 0.2, 0.2) : new THREE.Color(0, 0, 0)
 
   return (
     <group position={[position[0], yPos, position[1]]} rotation={[0, rotation, 0]} ref={meshRef}>
@@ -45,39 +51,39 @@ export const Human = ({ pickingId, position, rotation, state, name, color, outfi
         {/* Legs */}
         <mesh position={[-0.02, 0.075, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[0.015, 0.015, 0.15, 6]} />
-          <meshStandardMaterial color={actualOutfitColor} />
+          <meshStandardMaterial color={actualOutfitColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
         <mesh position={[0.02, 0.075, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[0.015, 0.015, 0.15, 6]} />
-          <meshStandardMaterial color={actualOutfitColor} />
+          <meshStandardMaterial color={actualOutfitColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
 
         {/* Torso */}
         <mesh position={[0, 0.22, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[0.05, 0.04, 0.16, 8]} />
-          <meshStandardMaterial color={actualOutfitColor} />
+          <meshStandardMaterial color={actualOutfitColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
 
         {/* Arms */}
         <mesh position={[-0.06, 0.22, 0]} rotation={[0, 0, 0.2]} castShadow receiveShadow>
           <cylinderGeometry args={[0.012, 0.012, 0.15, 6]} />
-          <meshStandardMaterial color={actualSkinColor} />
+          <meshStandardMaterial color={actualSkinColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
         <mesh position={[0.06, 0.22, 0]} rotation={[0, 0, -0.2]} castShadow receiveShadow>
           <cylinderGeometry args={[0.012, 0.012, 0.15, 6]} />
-          <meshStandardMaterial color={actualSkinColor} />
+          <meshStandardMaterial color={actualSkinColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
 
         {/* Head */}
         <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
           <sphereGeometry args={[0.06, 8, 8]} />
-          <meshStandardMaterial color={actualSkinColor} />
+          <meshStandardMaterial color={actualSkinColor} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
 
         {/* Hair/Hat (Simple hair blob) */}
         <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
           <sphereGeometry args={[0.05, 6, 6]} />
-          <meshStandardMaterial color="#442211" />
+          <meshStandardMaterial color="#442211" emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
         </mesh>
       </group>
 

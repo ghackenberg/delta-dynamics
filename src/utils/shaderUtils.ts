@@ -113,6 +113,10 @@ export const injectModules = (
     }
   }
 
+  // Ensure unique program cache key for materials with different modules
+  const moduleKey = modules.map(m => m.name).join('|')
+  material.customProgramCacheKey = () => moduleKey
+
   // Force material update
   material.needsUpdate = true
 }

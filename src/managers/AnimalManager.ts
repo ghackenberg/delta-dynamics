@@ -3,11 +3,13 @@ import { GRID_SIZE, TILE_SIZE } from '../constants/gameConfig'
 import { animalSurfaceVertexModule } from '../shaders/animals/surface.vert'
 import { animalPickingVertexModule } from '../shaders/animals/picking.vert'
 import { animalPickingFragmentModule } from '../shaders/animals/picking.frag'
+import { highlightFragmentModule } from '../shaders/shared/highlight'
 import { injectModules } from '../utils/shaderUtils'
 import type { Animal } from '../types/game'
 
 export class AnimalManager {
   public uTime = { value: 0 }
+  public uHoveredPickingId = { value: -1.0 }
   public uTerrainSurface = { value: null as THREE.Texture | null }
   public materials: {
     deer: THREE.MeshStandardMaterial
@@ -33,16 +35,14 @@ export class AnimalManager {
     const commonUniforms = {
       uTerrainSurface: this.uTerrainSurface,
       uTime: this.uTime,
+      uHoveredPickingId: this.uHoveredPickingId,
       uGridSize: { value: GRID_SIZE * TILE_SIZE }
     }
 
-    injectModules(this.materials.deer, [animalSurfaceVertexModule], commonUniforms)
-    injectModules(this.materials.wolf, [animalSurfaceVertexModule], commonUniforms)
+    injectModules(this.materials.deer, [animalSurfaceVertexModule, highlightFragmentModule], commonUniforms)
+    injectModules(this.materials.wolf, [animalSurfaceVertexModule, highlightFragmentModule], commonUniforms)
     injectModules(this.materials.depth, [animalSurfaceVertexModule], commonUniforms)
-    injectModules(this.materials.picking, [animalPickingVertexModule, animalPickingFragmentModule], {
-      uTerrainSurface: this.uTerrainSurface,
-      uGridSize: { value: GRID_SIZE * TILE_SIZE }
-    })
+    injectModules(this.materials.picking, [animalPickingVertexModule, animalPickingFragmentModule], commonUniforms)
   }
 
   public updateHeightTexture(heightTexture: THREE.Texture | null) {
@@ -51,6 +51,10 @@ export class AnimalManager {
 
   public updateTime(time: number) {
     this.uTime.value = time
+  }
+
+  public updateHoveredEntity(pickingId: number | null) {
+    this.uHoveredPickingId.value = pickingId ?? -1.0
   }
 
   public updateInstances(
@@ -68,8 +72,12 @@ export class AnimalManager {
     const updateMesh = (mesh: THREE.InstancedMesh, picking: THREE.InstancedMesh, list: Animal[]) => {
       const pickingAttr = mesh.geometry.getAttribute('aPickingId') as THREE.InstancedBufferAttribute
       const pickingArray = pickingAttr.array as Float32Array
-      pickingArray.fill(0)
-
+      
+      // Clear unused instances in the buffer if necessary, or just rely on .count
+      // Note: Since geometry is shared between deer/wolf in the component, 
+      // we must be careful. But here each call gets a different mesh/picking pair.
+      // Wait, InstancedAnimals.tsx uses SAME animalGeo for both deer and wolf!
+      
       list.forEach((animal, i) => {
         dummy.position.set(animal.position[0], 0, animal.position[1])
         dummy.rotation.y = animal.rotation
@@ -85,6 +93,8 @@ export class AnimalManager {
       mesh.instanceMatrix.needsUpdate = true
       picking.count = list.length
       picking.instanceMatrix.needsUpdate = true
+      
+      // Mark attribute as needing update
       pickingAttr.needsUpdate = true
     }
 

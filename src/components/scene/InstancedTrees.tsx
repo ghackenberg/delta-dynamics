@@ -10,41 +10,57 @@ export const InstancedTrees = () => {
   const buildings = useStore((state) => state.buildings)
   const heightTexture = useStore((state) => state.heightTexture)
   const terrainVertices = useStore((state) => state.terrainVertices)
+  const hoveredEntityId = useStore((state) => state.hoveredEntityId)
   const mode = useStore((state) => state.mode)
   const isPickable = mode === 'PLAY'
-  
+
   const coniferRef = useRef<THREE.InstancedMesh>(null)
   const deciduousRef = useRef<THREE.InstancedMesh>(null)
   const birchRef = useRef<THREE.InstancedMesh>(null)
-  const trunkRef = useRef<THREE.InstancedMesh>(null)
-  
+  const coniferTrunkRef = useRef<THREE.InstancedMesh>(null)
+  const deciduousTrunkRef = useRef<THREE.InstancedMesh>(null)
+  const birchTrunkRef = useRef<THREE.InstancedMesh>(null)
+
   const coniferPickingRef = useRef<THREE.InstancedMesh>(null)
   const deciduousPickingRef = useRef<THREE.InstancedMesh>(null)
   const birchPickingRef = useRef<THREE.InstancedMesh>(null)
-  const trunkPickingRef = useRef<THREE.InstancedMesh>(null)
+  const coniferTrunkPickingRef = useRef<THREE.InstancedMesh>(null)
+  const deciduousTrunkPickingRef = useRef<THREE.InstancedMesh>(null)
+  const birchTrunkPickingRef = useRef<THREE.InstancedMesh>(null)
 
   const manager = useMemo(() => new TreeManager(null), [])
+
+  useEffect(() => {
+    const hoveredBuilding = buildings.find(b => b.id === hoveredEntityId)
+    manager.updateHoveredEntity(hoveredBuilding ? (hoveredBuilding.pickingId || 0) : null)
+  }, [manager, buildings, hoveredEntityId])
 
   useEffect(() => {
     manager.updateHeightTexture(heightTexture)
   }, [manager, heightTexture])
 
   useEffect(() => {
-    if (!coniferRef.current || !deciduousRef.current || !birchRef.current || !trunkRef.current ||
-        !coniferPickingRef.current || !deciduousPickingRef.current || !birchPickingRef.current || !trunkPickingRef.current) return
+    if (!coniferRef.current || !deciduousRef.current || !birchRef.current || 
+        !coniferTrunkRef.current || !deciduousTrunkRef.current || !birchTrunkRef.current ||
+        !coniferPickingRef.current || !deciduousPickingRef.current || !birchPickingRef.current || 
+        !coniferTrunkPickingRef.current || !deciduousTrunkPickingRef.current || !birchTrunkPickingRef.current) return
     
     manager.updateInstances(
       {
         conifer: coniferRef.current,
+        coniferTrunk: coniferTrunkRef.current,
         deciduous: deciduousRef.current,
+        deciduousTrunk: deciduousTrunkRef.current,
         birch: birchRef.current,
-        trunk: trunkRef.current
+        birchTrunk: birchTrunkRef.current
       },
       {
         conifer: coniferPickingRef.current,
+        coniferTrunk: coniferTrunkPickingRef.current,
         deciduous: deciduousPickingRef.current,
+        deciduousTrunk: deciduousTrunkPickingRef.current,
         birch: birchPickingRef.current,
-        trunk: trunkPickingRef.current
+        birchTrunk: birchTrunkPickingRef.current
       },
       buildings,
       terrainVertices
@@ -90,8 +106,14 @@ export const InstancedTrees = () => {
 
   return (
     <group>
-      <instancedMesh ref={trunkRef} args={[trunkGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
-        <primitive object={manager.materials.trunk} attach="material" />
+      <instancedMesh ref={coniferTrunkRef} args={[trunkGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
+        <primitive object={manager.materials.coniferTrunk} attach="material" />
+      </instancedMesh>
+      <instancedMesh ref={deciduousTrunkRef} args={[trunkGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
+        <primitive object={manager.materials.deciduousTrunk} attach="material" />
+      </instancedMesh>
+      <instancedMesh ref={birchTrunkRef} args={[trunkGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
+        <primitive object={manager.materials.birchTrunk} attach="material" />
       </instancedMesh>
       <instancedMesh ref={coniferRef} args={[coniferGeo, undefined, MAX_TREES]} castShadow receiveShadow customDepthMaterial={manager.materials.depth} frustumCulled={false}>
         <primitive object={manager.materials.conifer} attach="material" />
@@ -104,7 +126,13 @@ export const InstancedTrees = () => {
       </instancedMesh>
 
       {/* Picking Meshes */}
-      <instancedMesh ref={trunkPickingRef} args={[trunkGeo, undefined, MAX_TREES]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
+      <instancedMesh ref={coniferTrunkPickingRef} args={[trunkGeo, undefined, MAX_TREES]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
+        <primitive object={manager.materials.picking} attach="material" />
+      </instancedMesh>
+      <instancedMesh ref={deciduousTrunkPickingRef} args={[trunkGeo, undefined, MAX_TREES]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
+        <primitive object={manager.materials.picking} attach="material" />
+      </instancedMesh>
+      <instancedMesh ref={birchTrunkPickingRef} args={[trunkGeo, undefined, MAX_TREES]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
         <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
       <instancedMesh ref={coniferPickingRef} args={[coniferGeo, undefined, MAX_TREES]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>

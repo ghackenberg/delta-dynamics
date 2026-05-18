@@ -3,18 +3,22 @@ import { GRID_SIZE, TILE_SIZE, OFFSET } from '../constants/gameConfig'
 import { treeSurfaceVertexModule } from '../shaders/trees/surface.vert'
 import { treePickingVertexModule } from '../shaders/trees/picking.vert'
 import { treePickingFragmentModule } from '../shaders/trees/picking.frag'
+import { highlightFragmentModule } from '../shaders/shared/highlight'
 import { injectModules } from '../utils/shaderUtils'
 import { getVertexTotalHeight } from '../utils/gameUtils'
 import type { BuildingInstance, TerrainVertex } from '../types/game'
 
 export class TreeManager {
   public uTime = { value: 0 }
+  public uHoveredPickingId = { value: -1.0 }
   public uTerrainSurface = { value: null as THREE.Texture | null }
   public materials: {
     conifer: THREE.MeshStandardMaterial
+    coniferTrunk: THREE.MeshStandardMaterial
     deciduous: THREE.MeshStandardMaterial
+    deciduousTrunk: THREE.MeshStandardMaterial
     birch: THREE.MeshStandardMaterial
-    trunk: THREE.MeshStandardMaterial
+    birchTrunk: THREE.MeshStandardMaterial
     depth: THREE.MeshDepthMaterial
     picking: THREE.MeshBasicMaterial
   }
@@ -24,9 +28,11 @@ export class TreeManager {
 
     this.materials = {
       conifer: new THREE.MeshStandardMaterial({ color: '#1a3317' }),
+      coniferTrunk: new THREE.MeshStandardMaterial({ color: '#2D1B13' }), // Dark greyish brown
       deciduous: new THREE.MeshStandardMaterial({ color: '#385e2c' }),
+      deciduousTrunk: new THREE.MeshStandardMaterial({ color: '#3E2723' }), // Warm dark brown
       birch: new THREE.MeshStandardMaterial({ color: '#6e8b3d' }),
-      trunk: new THREE.MeshStandardMaterial({ color: '#3E2723' }),
+      birchTrunk: new THREE.MeshStandardMaterial({ color: '#A1887F' }), // Lighter brown
       depth: new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }),
       picking: new THREE.MeshBasicMaterial()
     }
@@ -38,13 +44,16 @@ export class TreeManager {
     const commonUniforms = {
       uTerrainSurface: this.uTerrainSurface,
       uTime: this.uTime,
+      uHoveredPickingId: this.uHoveredPickingId,
       uGridSize: { value: GRID_SIZE * TILE_SIZE }
     }
 
-    injectModules(this.materials.conifer, [treeSurfaceVertexModule], commonUniforms)
-    injectModules(this.materials.deciduous, [treeSurfaceVertexModule], commonUniforms)
-    injectModules(this.materials.birch, [treeSurfaceVertexModule], commonUniforms)
-    injectModules(this.materials.trunk, [treeSurfaceVertexModule], commonUniforms)
+    injectModules(this.materials.conifer, [treeSurfaceVertexModule, highlightFragmentModule], commonUniforms)
+    injectModules(this.materials.coniferTrunk, [treeSurfaceVertexModule, highlightFragmentModule], commonUniforms)
+    injectModules(this.materials.deciduous, [treeSurfaceVertexModule, highlightFragmentModule], commonUniforms)
+    injectModules(this.materials.deciduousTrunk, [treeSurfaceVertexModule, highlightFragmentModule], commonUniforms)
+    injectModules(this.materials.birch, [treeSurfaceVertexModule, highlightFragmentModule], commonUniforms)
+    injectModules(this.materials.birchTrunk, [treeSurfaceVertexModule, highlightFragmentModule], commonUniforms)
     injectModules(this.materials.depth, [treeSurfaceVertexModule], commonUniforms)
     injectModules(this.materials.picking, [treePickingVertexModule, treePickingFragmentModule], {
       uTerrainSurface: this.uTerrainSurface,
@@ -60,18 +69,26 @@ export class TreeManager {
     this.uTime.value = time
   }
 
+  public updateHoveredEntity(pickingId: number | null) {
+    this.uHoveredPickingId.value = pickingId ?? -1.0
+  }
+
   public updateInstances(
     meshes: {
       conifer: THREE.InstancedMesh
+      coniferTrunk: THREE.InstancedMesh
       deciduous: THREE.InstancedMesh
+      deciduousTrunk: THREE.InstancedMesh
       birch: THREE.InstancedMesh
-      trunk: THREE.InstancedMesh
+      birchTrunk: THREE.InstancedMesh
     },
     pickingMeshes: {
       conifer: THREE.InstancedMesh
+      coniferTrunk: THREE.InstancedMesh
       deciduous: THREE.InstancedMesh
+      deciduousTrunk: THREE.InstancedMesh
       birch: THREE.InstancedMesh
-      trunk: THREE.InstancedMesh
+      birchTrunk: THREE.InstancedMesh
     },
     buildings: BuildingInstance[],
     terrainVertices: TerrainVertex[][]
@@ -81,7 +98,6 @@ export class TreeManager {
     const coniferList = buildings.filter(b => b.type === 'TREE_CONIFER' || b.type === 'TREE')
     const deciduousList = buildings.filter(b => b.type === 'TREE_DECIDUOUS')
     const birchList = buildings.filter(b => b.type === 'TREE_BIRCH')
-    const allTrees = [...coniferList, ...deciduousList, ...birchList]
 
     const updateMesh = (mesh: THREE.InstancedMesh, picking: THREE.InstancedMesh, list: BuildingInstance[], isTrunk = false) => {
       const pickingAttr = mesh.geometry.getAttribute('aPickingId') as THREE.InstancedBufferAttribute
@@ -138,9 +154,11 @@ export class TreeManager {
     }
 
     updateMesh(meshes.conifer, pickingMeshes.conifer, coniferList)
+    updateMesh(meshes.coniferTrunk, pickingMeshes.coniferTrunk, coniferList, true)
     updateMesh(meshes.deciduous, pickingMeshes.deciduous, deciduousList)
+    updateMesh(meshes.deciduousTrunk, pickingMeshes.deciduousTrunk, deciduousList, true)
     updateMesh(meshes.birch, pickingMeshes.birch, birchList)
-    updateMesh(meshes.trunk, pickingMeshes.trunk, allTrees, true)
+    updateMesh(meshes.birchTrunk, pickingMeshes.birchTrunk, birchList, true)
   }
 
   public dispose() {

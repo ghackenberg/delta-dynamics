@@ -9,11 +9,14 @@ export const animalSurfaceVertexModule: ShaderModule = {
             uniform float uTime;
             uniform float uGridSize;
             attribute float aRandom;
+            attribute float aPickingId;
             varying float vRandom;
+            varying float vPickingId;
             ${BILINEAR_GLSL}
         `,
         begin: `
             vRandom = aRandom;
+            vPickingId = aPickingId;
             vec4 instPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
             
             // Exact UV Mapping to match Terrain.tsx 101x101 DataTexture
@@ -24,8 +27,6 @@ export const animalSurfaceVertexModule: ShaderModule = {
             vec2 sUv = (uv * 100.0 + 0.5) / 101.0;
             float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
             
-            transformed.y += h / instanceMatrix[1][1];
-
             // Procedural animation (Hopping/Waddling)
             float speed = 8.0 + aRandom * 4.0;
             float hop = abs(sin(uTime * speed + aRandom * 10.0)) * 0.05;
@@ -37,6 +38,9 @@ export const animalSurfaceVertexModule: ShaderModule = {
             float sinT = sin(tilt);
             mat2 rot = mat2(cosT, -sinT, sinT, cosT);
             transformed.xy = rot * transformed.xy;
+
+            // Apply terrain height LAST to avoid rotation issues
+            transformed.y += h / instanceMatrix[1][1];
         `
     }
 }

@@ -197,6 +197,7 @@ export const GameGrid = () => {
       {humans.map(human => (
         <Human
           key={human.id}
+          id={human.id}
           pickingId={human.pickingId}
           position={human.position}
           rotation={human.rotation}
