@@ -16,7 +16,9 @@ import {
   INITIAL_RESOURCES, 
   BUILDING_SIZES,
   MAX_TREES,
-  TREE_SLOPE_THRESHOLD
+  TREE_SLOPE_THRESHOLD,
+  HUMAN_SLOPE_THRESHOLD,
+  ANIMAL_SLOPE_THRESHOLD
 } from '../constants/gameConfig'
 import { gridToWorld } from '../utils/gameUtils'
 import { generateInitialTerrain, paintArea, isAreaFlat, getCellMaxSlope } from '../systems/terrainSystem'
@@ -64,7 +66,7 @@ const initialHumans = [{
   id: 'starter', 
   pickingId: 1, 
   name: 'Leader', 
-  position: findSafeLandPosition(initialSWater), 
+  position: findSafeLandPosition(initialSWater, initialVertices, HUMAN_SLOPE_THRESHOLD), 
   rotation: 0, 
   target: null, 
   state: 'IDLE' as const, 
@@ -83,8 +85,11 @@ animalConfigs.forEach((config, idx) => {
   const gridX = Math.floor((config.pos[0] + BOUNDARY) / TILE_SIZE)
   const gridZ = Math.floor((config.pos[1] + BOUNDARY) / TILE_SIZE)
   let finalPos = config.pos
-  if (gridX >= 0 && gridX < GRID_SIZE && gridZ >= 0 && gridZ < GRID_SIZE && initialSWater[gridZ * GRID_SIZE + gridX] > 0.05) {
-    finalPos = findSafeLandPosition(initialSWater)
+  const isWater = gridX >= 0 && gridX < GRID_SIZE && gridZ >= 0 && gridZ < GRID_SIZE && initialSWater[gridZ * GRID_SIZE + gridX] > 0.05
+  const isSteep = gridX >= 0 && gridX < GRID_SIZE && gridZ >= 0 && gridZ < GRID_SIZE && getCellMaxSlope(initialVertices, gridX, gridZ) > ANIMAL_SLOPE_THRESHOLD
+  
+  if (isWater || isSteep) {
+    finalPos = findSafeLandPosition(initialSWater, initialVertices, ANIMAL_SLOPE_THRESHOLD)
   }
   initialAnimals.push({ 
     id: `${config.type.toLowerCase()}${idx + 1}`, 
@@ -165,8 +170,8 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
     const isNight = newTime >= 1320 || newTime < 360
     const simulationSpeed = isNight ? 25 : 50 
 
-    const newHumans = state.humans.map(human => updateHuman(human, isNight, state.buildings, sWater))
-    const newAnimals = state.animals.map(animal => updateAnimal(animal, sWater))
+    const newHumans = state.humans.map(human => updateHuman(human, isNight, state.buildings, sWater, state.terrainVertices))
+    const newAnimals = state.animals.map(animal => updateAnimal(animal, sWater, state.terrainVertices))
 
     const tempState: Partial<StoreState> = { 
       sWater: state.sWater, 
@@ -244,7 +249,7 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
   }),
 
   spawnAnimal: (type, x, z) => set((state) => {
-    const pos: [number, number] = (x !== undefined && z !== undefined) ? [x, z] : findSafeLandPosition(state.sWater)
+    const pos: [number, number] = (x !== undefined && z !== undefined) ? [x, z] : findSafeLandPosition(state.sWater, state.terrainVertices, ANIMAL_SLOPE_THRESHOLD)
     const maxPickingId = state.animals.reduce((max, a) => Math.max(max, a.pickingId || 0), 0)
     return { 
       animals: [...state.animals, { 
