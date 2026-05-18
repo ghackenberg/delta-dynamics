@@ -20,9 +20,21 @@
   </g>
 
   <!-- High-contrast White Text Branding -->
-  <!-- Subtle drop shadow for depth and separation -->
+  <!-- Back D -->
   <text 
-    x="50.5%" 
+    x="42%" 
+    y="50%" 
+    dominant-baseline="central" 
+    text-anchor="middle" 
+    font-family="Arial, sans-serif" 
+    font-weight="900" 
+    font-size="340" 
+    fill="white"
+    fill-opacity="0.4"
+  >D</text>
+  <!-- Front D with Shadow -->
+  <text 
+    x="58.5%" 
     y="50.5%" 
     dominant-baseline="central" 
     text-anchor="middle" 
@@ -31,9 +43,9 @@
     font-size="340" 
     fill="black"
     fill-opacity="0.2"
-  >D²</text>
+  >D</text>
   <text 
-    x="50%" 
+    x="58%" 
     y="50%" 
     dominant-baseline="central" 
     text-anchor="middle" 
@@ -41,5 +53,5 @@
     font-weight="900" 
     font-size="340" 
     fill="white"
-  >D²</text>
+  >D</text>
 </svg>
