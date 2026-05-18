@@ -62,48 +62,8 @@ const {
   occupancyGrid: initialOccupancy 
 } = generateInitialTerrain(activeTerrainId)
 
-const initialHumans = [{ 
-  id: 'starter', 
-  pickingId: 1, 
-  name: 'Leader', 
-  position: findSafeLandPosition(initialSWater, initialVertices, HUMAN_SLOPE_THRESHOLD), 
-  rotation: 0, 
-  target: null, 
-  state: 'IDLE' as const, 
-  homeId: null, 
-  workplaceId: null, 
-  color: getRandomSkinTone(), 
-  outfitColor: getRandomOutfitColor() 
-}]
-
-const initialAnimals: Animal[] = []
-const animalConfigs: {type: AnimalType, pos: [number, number]}[] = [
-  { type: 'DEER', pos: [2, 2] }, { type: 'DEER', pos: [5, -3] }, { type: 'DEER', pos: [-4, 6] }, 
-  { type: 'WOLF', pos: [-2, -2] }, { type: 'WOLF', pos: [-7, -5] },
-]
-animalConfigs.forEach((config, idx) => {
-  const gridX = Math.floor((config.pos[0] + BOUNDARY) / TILE_SIZE)
-  const gridZ = Math.floor((config.pos[1] + BOUNDARY) / TILE_SIZE)
-  let finalPos = config.pos
-  const isWater = gridX >= 0 && gridX < GRID_SIZE && gridZ >= 0 && gridZ < GRID_SIZE && initialSWater[gridZ * GRID_SIZE + gridX] > 0.05
-  const isSteep = gridX >= 0 && gridX < GRID_SIZE && gridZ >= 0 && gridZ < GRID_SIZE && getCellMaxSlope(initialVertices, gridX, gridZ) > ANIMAL_SLOPE_THRESHOLD
-  
-  if (isWater || isSteep) {
-    finalPos = findSafeLandPosition(initialSWater, initialVertices, ANIMAL_SLOPE_THRESHOLD)
-  }
-  initialAnimals.push({ 
-    id: `${config.type.toLowerCase()}${idx + 1}`, 
-    pickingId: idx + 1, 
-    type: config.type, 
-    position: finalPos, 
-    rotation: 0, 
-    target: null, 
-    state: 'IDLE' as const, 
-    waitCounter: 0 
-  })
-})
-
 export interface GameSlice {
+  gameState: 'MENU' | 'PLAY'
   gameTime: number 
   day: number
   isNight: boolean
@@ -130,7 +90,9 @@ export interface GameSlice {
   spawnAnimal: (type: AnimalType, x?: number, z?: number) => void
   placeBuilding: (x: number, z: number, type: BuildingType) => void
   paintTerrain: (x: number, z: number, isErase: boolean) => void
+  loadTerrain: (terrainId: string) => void
   resetTerrain: () => void
+  setGameState: (state: 'MENU' | 'PLAY') => void
   setRainIntensity: (intensity: number) => void
   setTextures: (height: THREE.DataTexture, water: THREE.DataTexture) => void
 }
@@ -138,6 +100,7 @@ export interface GameSlice {
 export type StoreState = GameSlice & EditorSlice & AiSlice & UiSlice
 
 export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set, get) => ({
+  gameState: 'MENU',
   gameTime: 480, 
   day: 1, 
   isNight: false, 
@@ -157,11 +120,13 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
   rLevel: initialRLevel,
   heightTexture, 
   waterTexture,
-  humans: initialHumans,
-  animals: initialAnimals,
+  humans: [],
+  animals: [],
 
   tick: () => {
     const state = get()
+    if (state.gameState !== 'PLAY') return
+
     const { sWater, gWater } = state
     
     const newRainIntensity = Math.max(0, state.rainIntensity - 0.001)
@@ -511,9 +476,55 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
     return state
   }),
 
-  resetTerrain: () => {
-    const { vertices, sWater, gWater, tHeight, aCap, rLevel, buildings, occupancyGrid } = generateInitialTerrain('flat')
+  loadTerrain: (terrainId) => {
+    const { 
+      vertices, sWater, gWater, tHeight, aCap, rLevel, buildings, occupancyGrid 
+    } = generateInitialTerrain(terrainId)
+
+    const initialHumans = [{ 
+      id: 'starter', 
+      pickingId: 1, 
+      name: 'Leader', 
+      position: findSafeLandPosition(sWater, vertices, HUMAN_SLOPE_THRESHOLD), 
+      rotation: 0, 
+      target: null, 
+      state: 'IDLE' as const, 
+      homeId: null, 
+      workplaceId: null, 
+      color: getRandomSkinTone(), 
+      outfitColor: getRandomOutfitColor() 
+    }]
+
+    const initialAnimals: Animal[] = []
+    const animalConfigs: {type: AnimalType, pos: [number, number]}[] = [
+      { type: 'DEER', pos: [2, 2] }, { type: 'DEER', pos: [5, -3] }, { type: 'DEER', pos: [-4, 6] }, 
+      { type: 'WOLF', pos: [-2, -2] }, { type: 'WOLF', pos: [-7, -5] },
+    ]
+    animalConfigs.forEach((config, idx) => {
+      const gridX = Math.floor((config.pos[0] + BOUNDARY) / TILE_SIZE)
+      const gridZ = Math.floor((config.pos[1] + BOUNDARY) / TILE_SIZE)
+      let finalPos = config.pos
+      const isWater = gridX >= 0 && gridX < GRID_SIZE && gridZ >= 0 && gridZ < GRID_SIZE && sWater[gridZ * GRID_SIZE + gridX] > 0.05
+      const isSteep = gridX >= 0 && gridX < GRID_SIZE && gridZ >= 0 && gridZ < GRID_SIZE && getCellMaxSlope(vertices, gridX, gridZ) > ANIMAL_SLOPE_THRESHOLD
+      
+      if (isWater || isSteep) {
+        finalPos = findSafeLandPosition(sWater, vertices, ANIMAL_SLOPE_THRESHOLD)
+      }
+      initialAnimals.push({ 
+        id: `${config.type.toLowerCase()}${idx + 1}`, 
+        pickingId: idx + 1, 
+        type: config.type, 
+        position: finalPos, 
+        rotation: 0, 
+        target: null, 
+        state: 'IDLE' as const, 
+        waitCounter: 0 
+      })
+    })
+
     set((state) => ({
+      gameState: 'PLAY',
+      activeTerrainId: terrainId,
       terrainVertices: vertices,
       sWater,
       gWater,
@@ -523,10 +534,19 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
       buildings,
       occupancyGrid,
       terrainVersion: state.terrainVersion + 1,
-      humans: [], 
-      animals: []
+      humans: initialHumans,
+      animals: initialAnimals,
+      resources: { ...INITIAL_RESOURCES },
+      day: 1,
+      gameTime: 480
     }))
   },
+
+  resetTerrain: () => {
+    get().loadTerrain(get().activeTerrainId)
+  },
+
+  setGameState: (gameState) => set({ gameState }),
 
   setRainIntensity: (intensity) => set({ rainIntensity: intensity }),
   setTextures: (height, water) => set({ heightTexture: height, waterTexture: water }),

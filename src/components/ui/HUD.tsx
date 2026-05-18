@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react'
 import { useStore } from '../../hooks/useStore'
 import type { BuildingType, LayerType } from '../../types/game'
 import { GRID_SIZE, TERRAIN_BASE_Y, MATERIAL_PROPERTIES } from '../../constants/gameConfig'
+import { terrains } from '../../terrains'
 
 interface HUDProps {
   children: ReactNode
@@ -10,6 +11,8 @@ interface HUDProps {
 }
 
 export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
+  const gameState = useStore((state) => state.gameState)
+  const loadTerrain = useStore((state) => state.loadTerrain)
   const resources = useStore((state) => state.resources)
   const rates = useStore((state) => state.rates)
   const aiStatus = useStore((state) => state.aiStatus)
@@ -70,6 +73,7 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
 
   const mode = useStore((state) => state.mode)
   const setMode = useStore((state) => state.setMode)
+  const setGameState = useStore((state) => state.setGameState)
   const editorLayerType = useStore((state) => state.editorLayerType)
   const setEditorLayerType = useStore((state) => state.setEditorLayerType)
   const editorBrushSize = useStore((state) => state.editorBrushSize)
@@ -92,6 +96,53 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
       <div className="absolute inset-0 z-0 pointer-events-auto">
         {children}
       </div>
+
+      {gameState === 'MENU' && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md pointer-events-auto">
+          <div className="w-full max-w-4xl p-12 flex flex-col items-center">
+            <div className="flex items-center gap-6 mb-12">
+              <img src="/icon.svg" alt="Delta Dynamics" className="w-20 h-20 rounded-2xl shadow-2xl border border-white/10" />
+              <div className="flex flex-col">
+                <h1 className="text-4xl font-black uppercase tracking-[0.3em] text-white">Delta Dynamics</h1>
+                <p className="text-sm text-white/40 font-bold uppercase tracking-[0.5em] mt-2">Colony Simulator</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-6 w-full">
+              {terrains.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => loadTerrain(t.id)}
+                  className="group relative flex flex-col items-center p-8 rounded-3xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all duration-500 overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="text-lg font-black uppercase tracking-widest text-white/90 group-hover:text-white mb-2 transition-colors">{t.name}</span>
+                  <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest">{t.id.replace('-', ' ')}</span>
+                  <div className="mt-8 w-12 h-[1px] bg-white/10 group-hover:w-20 group-hover:bg-orange-500 transition-all duration-500" />
+                </button>
+              ))}
+              <button
+                onClick={() => loadTerrain('flat')}
+                className="group relative flex flex-col items-center p-8 rounded-3xl border border-dashed border-white/20 bg-transparent hover:bg-white/5 hover:border-white/40 transition-all duration-500"
+              >
+                <span className="text-lg font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Create New</span>
+                <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest mt-2">Blank Canvas</span>
+                <div className="mt-8 flex items-center justify-center w-10 h-10 rounded-full border border-white/10 group-hover:border-orange-500 group-hover:scale-110 transition-all duration-500">
+                  <span className="text-xl font-light text-white/20 group-hover:text-orange-500 transition-colors">+</span>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-16 flex flex-col items-center gap-4 opacity-30">
+              <span className="text-[10px] font-black uppercase tracking-[0.4em]">Early Access Build</span>
+              <div className="flex gap-8">
+                <span className="text-[9px] font-bold">v0.8.2-delta</span>
+                <span className="text-[9px] font-bold">2026.05.18</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top Bar Overlay */}
       <header className="absolute top-0 left-0 right-0 h-16 border-b border-white/10 bg-black/30 backdrop-blur-xl flex items-center px-6 justify-between z-20 shadow-2xl pointer-events-auto">
@@ -126,6 +177,12 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
               }`}
             >
               Terrain Editor
+            </button>
+            <button
+              onClick={() => setGameState('MENU')}
+              className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-red-500/20 transition-all"
+            >
+              Exit to Menu
             </button>
           </div>
 

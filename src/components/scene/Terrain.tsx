@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../hooks/useStore'
@@ -90,10 +90,6 @@ export const Terrain = () => {
   const [gpuSim] = useState(() => new WaterComputeSystem(gl))
   const terrainManager = useMemo(() => new TerrainManager(), [])
 
-  useEffect(() => {
-    gpuSim.setInitialWater(sWater, gWater, tHeight)
-  }, [gpuSim, sWater, gWater, tHeight]) // Only on mount or if water/terrain changes
-
   const layerColors = useMemo(() => {
     const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
     return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].color))
@@ -113,11 +109,12 @@ export const Terrain = () => {
   const terrainVertices = useStore((state) => state.terrainVertices)
 
   // Update terrain texture when vertices change
-  useEffect(() => {
+  useLayoutEffect(() => {
+    gpuSim.setInitialWater(sWater, gWater, tHeight)
     gpuSim.updateTerrain(terrainVertices, rLevel, aCap)
     gpuSim.updateMaterialProperties(layerPermeabilities)
     terrainManager.update(terrainVertices, rLevel, aCap)
-  }, [gpuSim, terrainVersion, terrainVertices, rLevel, aCap, terrainManager, layerPermeabilities])
+  }, [gpuSim, terrainVersion, terrainVertices, rLevel, aCap, terrainManager, layerPermeabilities, sWater, gWater, tHeight])
 
   const uniforms = useMemo(() => ({
     uTerrainLayers: { value: terrainManager.layerTex },

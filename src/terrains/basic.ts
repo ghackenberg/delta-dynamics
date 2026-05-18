@@ -36,7 +36,7 @@ export const basicTerrain: TerrainConfig = {
     const gWater = new Float32Array(GRID_SIZE * GRID_SIZE)
     const tHeight = new Float32Array(GRID_SIZE * GRID_SIZE)
     const aCap = new Float32Array(GRID_SIZE * GRID_SIZE)
-    const rLevel = new Float32Array(GRID_SIZE * GRID_SIZE).fill(-99)
+    const rLevel = new Float32Array(GRID_SIZE * GRID_SIZE).fill(0)
     
     const buildings: BuildingInstance[] = []
     const occupancyGrid: (string | null)[][] = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null))

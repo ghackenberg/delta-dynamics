@@ -74,6 +74,7 @@ export const WaterSimulation = ({
       const inflow = terrainConfig.getInflow ? terrainConfig.getInflow(gameTime) : 0
 
       const isRainPainting = mode === 'EDITOR' && isEditorInteracting && editorLayerType === 'RAIN'
+
       if (isRainPainting && hoveredCell) {
           rainBrushPos.set(hoveredCell.x, GRID_SIZE - 1 - hoveredCell.z)
       } else {

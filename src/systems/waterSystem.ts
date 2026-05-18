@@ -98,7 +98,7 @@ export class WaterComputeSystem {
                 const th = tHeight[gridIdx]
                 data[texIdx] = th + sw // sL
                 data[texIdx + 1] = gWater[gridIdx]
-                data[texIdx + 2] = sw // Store depth too for easy readback or debugging
+                data[texIdx + 2] = sw 
                 data[texIdx + 3] = 1.0
             }
         }

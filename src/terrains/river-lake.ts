@@ -87,7 +87,7 @@ export const riverLakeTerrain: TerrainConfig = {
     const gWater = new Float32Array(GRID_SIZE * GRID_SIZE)
     const tHeight = new Float32Array(GRID_SIZE * GRID_SIZE)
     const aCap = new Float32Array(GRID_SIZE * GRID_SIZE)
-    const rLevel = new Float32Array(GRID_SIZE * GRID_SIZE).fill(-99)
+    const rLevel = new Float32Array(GRID_SIZE * GRID_SIZE).fill(0)
     
     const buildings: BuildingInstance[] = []
     const occupancyGrid: (string | null)[][] = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null))
@@ -105,7 +105,7 @@ export const riverLakeTerrain: TerrainConfig = {
             tempState.rLevel![idx] = 1 // SOURCE
           }
         }
-
+        
         // Tree generation logic...
         let isHumusCell = true
         for (let di = 0; di <= 1; di++) {
