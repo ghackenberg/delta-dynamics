@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../hooks/useStore'
 import type { BuildingType, LayerType } from '../../types/game'
 import { GRID_SIZE, TERRAIN_BASE_Y, MATERIAL_PROPERTIES } from '../../constants/gameConfig'
@@ -11,8 +12,8 @@ interface HUDProps {
 }
 
 export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
+  const navigate = useNavigate()
   const gameState = useStore((state) => state.gameState)
-  const loadTerrain = useStore((state) => state.loadTerrain)
   const resources = useStore((state) => state.resources)
   const rates = useStore((state) => state.rates)
   const aiStatus = useStore((state) => state.aiStatus)
@@ -43,6 +44,8 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
   const fps = useStore((state) => state.fps)
   const fpsHistory = useStore((state) => state.fpsHistory)
 
+  const activeTerrainId = useStore((state) => state.activeTerrainId)
+
   const hoveredEntity = useMemo(() => {
     if (!hoveredEntityId) return null
     return buildingsState.find(b => b.id === hoveredEntityId) ||
@@ -72,8 +75,6 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
   ]
 
   const mode = useStore((state) => state.mode)
-  const setMode = useStore((state) => state.setMode)
-  const setGameState = useStore((state) => state.setGameState)
   const editorLayerType = useStore((state) => state.editorLayerType)
   const setEditorLayerType = useStore((state) => state.setEditorLayerType)
   const editorBrushSize = useStore((state) => state.editorBrushSize)
@@ -114,7 +115,7 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
               {terrains.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => loadTerrain(t.id)}
+                  onClick={() => navigate(`/play/${t.id}`)}
                   className="group relative flex flex-col items-center p-8 rounded-3xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all duration-500 overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -124,7 +125,7 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
                 </button>
               ))}
               <button
-                onClick={() => loadTerrain('flat')}
+                onClick={() => navigate('/play/flat')}
                 className="group relative flex flex-col items-center p-8 rounded-3xl border border-dashed border-white/20 bg-transparent hover:bg-white/5 hover:border-white/40 transition-all duration-500"
               >
                 <span className="text-lg font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Create New</span>
@@ -159,7 +160,10 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
 
           <div className="flex gap-4">
             <button
-              onClick={() => setMode('PLAY')}
+              onClick={() => {
+                if (mode === 'EDITOR') navigate(-1)
+                else if (gameState === 'MENU') navigate(`/play/${activeTerrainId}`)
+              }}
               className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
                 mode === 'PLAY' 
                 ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
@@ -169,7 +173,9 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
               Play Mode
             </button>
             <button
-              onClick={() => setMode('EDITOR')}
+              onClick={() => {
+                if (mode === 'PLAY') navigate(`/edit/${activeTerrainId}`)
+              }}
               className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
                 mode === 'EDITOR' 
                 ? 'bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.4)]' 
@@ -179,7 +185,11 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
               Terrain Editor
             </button>
             <button
-              onClick={() => setGameState('MENU')}
+              onClick={() => {
+                if (mode === 'EDITOR') navigate(-2)
+                else if (mode === 'PLAY') navigate(-1)
+                else navigate('/')
+              }}
               className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-red-500/20 transition-all"
             >
               Exit to Menu
