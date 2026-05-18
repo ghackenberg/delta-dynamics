@@ -17,6 +17,8 @@ for (let i = 0; i < MAX_ANIMALS; i++) {
 export const InstancedAnimals = () => {
   const animals = useStore((state) => state.animals)
   const heightTexture = useStore((state) => state.heightTexture)
+  const mode = useStore((state) => state.mode)
+  const isPickable = mode === 'PLAY'
   
   const deerRef = useRef<THREE.InstancedMesh>(null)
   const wolfRef = useRef<THREE.InstancedMesh>(null)
@@ -72,10 +74,10 @@ export const InstancedAnimals = () => {
       </instancedMesh>
 
       {/* Picking Meshes */}
-      <instancedMesh ref={deerPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
+      <instancedMesh ref={deerPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
         <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={wolfPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
+      <instancedMesh ref={wolfPickingRef} args={[animalGeo, undefined, MAX_ANIMALS]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
         <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
     </group>

@@ -25,6 +25,9 @@ export const Human = ({ pickingId, position, rotation, state, name, color, outfi
   const gridZ = (position[1] + BOUNDARY) / TILE_SIZE
   const yPos = getInterpolatedHeight(terrainVertices, gridX, gridZ)
 
+  const mode = useStore(state => state.mode)
+  const isPickable = mode === 'PLAY'
+
   const actualOutfitColor = state === 'SLEEPING' ? '#333' : outfitColor
   const actualSkinColor = state === 'SLEEPING' ? '#555' : color
 
@@ -79,7 +82,7 @@ export const Human = ({ pickingId, position, rotation, state, name, color, outfi
       </group>
 
       {/* Picking Mesh */}
-      <mesh layers-mask={1 << PICKING_LAYER} position={[0, 0.25, 0]}>
+      <mesh layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} position={[0, 0.25, 0]}>
         <cylinderGeometry args={[0.1, 0.1, 0.5, 6]} />
         <meshBasicMaterial color={pickingColor} />
       </mesh>

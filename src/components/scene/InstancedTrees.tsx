@@ -9,6 +9,8 @@ import { TreeManager } from '../../managers/TreeManager'
 export const InstancedTrees = () => {
   const buildings = useStore((state) => state.buildings)
   const heightTexture = useStore((state) => state.heightTexture)
+  const mode = useStore((state) => state.mode)
+  const isPickable = mode === 'PLAY'
   
   const coniferRef = useRef<THREE.InstancedMesh>(null)
   const deciduousRef = useRef<THREE.InstancedMesh>(null)
@@ -96,16 +98,16 @@ export const InstancedTrees = () => {
       </instancedMesh>
 
       {/* Picking Meshes */}
-      <instancedMesh ref={trunkPickingRef} args={[trunkGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
+      <instancedMesh ref={trunkPickingRef} args={[trunkGeo, undefined, MAX_TREES]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
         <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={coniferPickingRef} args={[coniferGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
+      <instancedMesh ref={coniferPickingRef} args={[coniferGeo, undefined, MAX_TREES]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
         <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={deciduousPickingRef} args={[deciduousGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
+      <instancedMesh ref={deciduousPickingRef} args={[deciduousGeo, undefined, MAX_TREES]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
         <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
-      <instancedMesh ref={birchPickingRef} args={[birchGeo, undefined, MAX_TREES]} layers-mask={1 << PICKING_LAYER} frustumCulled={false}>
+      <instancedMesh ref={birchPickingRef} args={[birchGeo, undefined, MAX_TREES]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0} frustumCulled={false}>
         <primitive object={manager.materials.picking} attach="material" />
       </instancedMesh>
     </group>

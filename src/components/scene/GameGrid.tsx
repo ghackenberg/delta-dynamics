@@ -16,6 +16,8 @@ export const GameGrid = () => {
   const hoveredCell = useStore((state) => state.hoveredCell)
   const selectedBuildingType = useStore((state) => state.selectedBuildingType)
   const terrainVertices = useStore((state) => state.terrainVertices)
+  const mode = useStore((state) => state.mode)
+  const isPickable = mode === 'PLAY'
 
   const isValidPlacement = useMemo(() => {
     if (!hoveredCell) return true
@@ -81,7 +83,7 @@ export const GameGrid = () => {
             <boxGeometry args={[0.05, 0.5, 0.2]} />
             <meshStandardMaterial color={colors.corpus} roughness={0.8} />
           </mesh>
-          <mesh position={[0, 0.25, 0]} layers-mask={1 << PICKING_LAYER}>
+          <mesh position={[0, 0.25, 0]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0}>
             <boxGeometry args={[0.05, 0.5, 0.2]} />
             <meshBasicMaterial color={pickingColor} />
           </mesh>
@@ -112,7 +114,7 @@ export const GameGrid = () => {
             </mesh>
           </group>
           {/* Picking Mesh (Solid box even if not ready) */}
-          <mesh position={[0, meshScale / 3, 0]} layers-mask={1 << PICKING_LAYER}>
+          <mesh position={[0, meshScale / 3, 0]} layers-mask={isPickable ? (1 << PICKING_LAYER) : 0}>
             <boxGeometry args={[meshScale, meshScale / 1.5, meshScale]} />
             <meshBasicMaterial color={pickingColor} />
           </mesh>
