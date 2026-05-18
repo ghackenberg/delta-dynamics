@@ -127,9 +127,7 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
               >
                 <span className="text-lg font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Create New</span>
                 <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest mt-2">Blank Canvas</span>
-                <div className="mt-8 flex items-center justify-center w-10 h-10 rounded-full border border-white/10 group-hover:border-orange-500 group-hover:scale-110 transition-all duration-500">
-                  <span className="text-xl font-light text-white/20 group-hover:text-orange-500 transition-colors">+</span>
-                </div>
+                <div className="mt-8 w-12 h-[1px] bg-white/10 group-hover:w-20 group-hover:bg-orange-500 transition-all duration-500" />
               </button>
             </div>
 
