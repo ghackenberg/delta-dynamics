@@ -1,7 +1,8 @@
-import { GRID_SIZE, TERRAIN_BASE_Y } from '../constants/gameConfig'
+import { GRID_SIZE, TERRAIN_BASE_Y, TREE_SLOPE_THRESHOLD } from '../constants/gameConfig'
 import { SAMPLE_HEIGHTMAP } from './heightmaps'
 import type { TerrainVertex, TerrainLayer, BuildingInstance, BuildingType, GameState, TerrainConfig } from '../types/game'
 import { updateCellWaterData } from '../systems/waterSystem'
+import { getCellMaxSlope } from '../systems/terrainSystem'
 
 export const basicTerrain: TerrainConfig = {
   id: 'basic',
@@ -60,28 +61,45 @@ export const basicTerrain: TerrainConfig = {
         }
 
         const idx = j * GRID_SIZE + i
-        if (isHumusCell && sWater[idx] <= 0 && Math.random() > 0.98) {
-          const treeTypes: BuildingType[] = ['TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH']
-          const randomTree = treeTypes[Math.floor(Math.random() * treeTypes.length)]
-          const id = Math.random().toString(36).substr(2, 9)
-          
-          buildings.push({ 
-            id, 
-            pickingId: buildings.length + 1,
-            type: randomTree, 
-            level: 1, 
-            progress: 100, 
-            isReady: true, 
-            assignedWorkers: [], 
-            x: i, 
-            z: j, 
-            width: 1, 
-            height: 1 
-          })
-          occupancyGrid[i][j] = id
+        if (isHumusCell && getCellMaxSlope(vertices, i, j) <= TREE_SLOPE_THRESHOLD && sWater[idx] <= 0 && Math.random() > 0.98) {
+          const treeSpacing = 3
+          let tooClose = false
+          const sXi = Math.max(0, i - treeSpacing), eXi = Math.min(GRID_SIZE - 1, i + treeSpacing)
+          const sZj = Math.max(0, j - treeSpacing), eZj = Math.min(GRID_SIZE - 1, j + treeSpacing)
+          for (let ni = sXi; ni <= eXi; ni++) {
+            for (let nj = sZj; nj <= eZj; nj++) {
+              if ((ni - i) ** 2 + (nj - j) ** 2 >= treeSpacing ** 2) continue
+              if (occupancyGrid[ni][nj]) {
+                tooClose = true; break
+              }
+            }
+            if (tooClose) break
+          }
+
+          if (!tooClose) {
+            const treeTypes: BuildingType[] = ['TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH']
+            const randomTree = treeTypes[Math.floor(Math.random() * treeTypes.length)]
+            const id = Math.random().toString(36).substr(2, 9)
+            
+            buildings.push({ 
+              id, 
+              pickingId: buildings.length + 1,
+              type: randomTree, 
+              level: 1, 
+              progress: 100, 
+              isReady: true, 
+              assignedWorkers: [], 
+              x: i, 
+              z: j, 
+              width: 1, 
+              height: 1 
+            })
+            occupancyGrid[i][j] = id
+          }
         }
       }
     }
     return { vertices, sWater, gWater, tHeight, aCap, rLevel, buildings, occupancyGrid }
   }
 }
+

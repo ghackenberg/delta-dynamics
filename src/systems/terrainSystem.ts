@@ -49,6 +49,26 @@ export const isAreaFlat = (vertices: TerrainVertex[][], xIdx: number, zIdx: numb
 }
 
 /**
+ * Calculates the maximum height difference within a single 1x1 cell.
+ */
+export const getCellMaxSlope = (vertices: TerrainVertex[][], x: number, z: number): number => {
+  if (x < 0 || x >= GRID_SIZE || z < 0 || z >= GRID_SIZE) return 0
+  const h00 = getVertexTotalHeight(vertices[x][z])
+  const h10 = getVertexTotalHeight(vertices[x + 1][z])
+  const h01 = getVertexTotalHeight(vertices[x][z + 1])
+  const h11 = getVertexTotalHeight(vertices[x + 1][z + 1])
+  
+  return Math.max(
+    Math.abs(h00 - h10),
+    Math.abs(h00 - h01),
+    Math.abs(h10 - h11),
+    Math.abs(h01 - h11),
+    Math.abs(h00 - h11),
+    Math.abs(h10 - h01)
+  )
+}
+
+/**
  * Updates water simulation data for a modified area.
  */
 export const updateWaterSimulationForArea = (

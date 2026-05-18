@@ -15,10 +15,11 @@ import {
   BOUNDARY, 
   INITIAL_RESOURCES, 
   BUILDING_SIZES,
-  MAX_TREES
+  MAX_TREES,
+  TREE_SLOPE_THRESHOLD
 } from '../constants/gameConfig'
 import { gridToWorld } from '../utils/gameUtils'
-import { generateInitialTerrain, paintArea, isAreaFlat } from '../systems/terrainSystem'
+import { generateInitialTerrain, paintArea, isAreaFlat, getCellMaxSlope } from '../systems/terrainSystem'
 import { 
   findSafeLandPosition, 
   getRandomSkinTone, 
@@ -296,6 +297,23 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
         if (!isHumusCell) break
       }
       if (!isHumusCell) return state
+      if (getCellMaxSlope(state.terrainVertices, xIndex, zIndex) > TREE_SLOPE_THRESHOLD) return state
+      
+      // Check for nearby trees to avoid overlap
+      const treeSpacing = 3
+      const sX = Math.max(0, xIndex - treeSpacing), eX = Math.min(GRID_SIZE - 1, xIndex + treeSpacing)
+      const sZ = Math.max(0, zIndex - treeSpacing), eZ = Math.min(GRID_SIZE - 1, zIndex + treeSpacing)
+      for (let i = sX; i <= eX; i++) {
+        for (let j = sZ; j <= eZ; j++) {
+          const bId = state.occupancyGrid[i][j]
+          if (bId) {
+            const b = state.buildings.find(item => item.id === bId)
+            if (b && ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(b.type)) {
+              if ((i - xIndex) ** 2 + (j - zIndex) ** 2 < treeSpacing ** 2) return state
+            }
+          }
+        }
+      }
     }
 
     for (let i = xIndex; i < xIndex + size.width; i++) 
@@ -349,8 +367,8 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
     const startJ = Math.max(0, zIndex - radius - 1)
     const endJ = Math.min(GRID_SIZE - 1, zIndex + radius)
 
-    // Snapshot of humus state before painting
-    const wasHumus = new Uint8Array((endI - startI + 1) * (endJ - startJ + 1))
+    // Snapshot of suitability before painting
+    const wasSuitable = new Uint8Array((endI - startI + 1) * (endJ - startJ + 1))
     for (let i = startI; i <= endI; i++) {
       for (let j = startJ; j <= endJ; j++) {
         let isHumus = true
@@ -364,7 +382,8 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
           }
           if (!isHumus) break
         }
-        if (isHumus) wasHumus[(i - startI) * (endJ - startJ + 1) + (j - startJ)] = 1
+        const isFlat = getCellMaxSlope(state.terrainVertices, i, j) <= TREE_SLOPE_THRESHOLD
+        if (isHumus && isFlat) wasSuitable[(i - startI) * (endJ - startJ + 1) + (j - startJ)] = 1
       }
     }
 
@@ -405,19 +424,47 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
             if (!isHumus) break
           }
 
+          const isFlat = getCellMaxSlope(terrainVertices, i, j) <= TREE_SLOPE_THRESHOLD
+          const isSuitable = isHumus && isFlat
           const buildingId = currentRow[j]
-          const wasH = wasHumus[(i - startI) * (endJ - startJ + 1) + (j - startJ)] === 1
+          const wasS = wasSuitable[(i - startI) * (endJ - startJ + 1) + (j - startJ)] === 1
 
           if (buildingId) {
             const building = buildingMap.get(buildingId)
             const isTree = building && ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(building.type)
-            if (isTree && !isHumus) {
+            if (isTree && !isSuitable) {
               idsToRemove.add(buildingId)
               currentRow[j] = null
               rowChanged = true
             }
-          } else if (isHumus && !wasH && sWater[j * GRID_SIZE + i] <= 0.05 && (buildings.length - idsToRemove.size + treesToAdd.length) < MAX_TREES) {
-            if (Math.random() < 0.02) {
+          } else if (isSuitable && !wasS && sWater[j * GRID_SIZE + i] <= 0.05 && (buildings.length - idsToRemove.size + treesToAdd.length) < MAX_TREES) {
+            // Check for nearby trees to avoid overlap
+            const treeSpacing = 3
+            let tooClose = false
+            const sXi = Math.max(0, i - treeSpacing), eXi = Math.min(GRID_SIZE - 1, i + treeSpacing)
+            const sZj = Math.max(0, j - treeSpacing), eZj = Math.min(GRID_SIZE - 1, j + treeSpacing)
+            for (let ni = sXi; ni <= eXi; ni++) {
+              for (let nj = sZj; nj <= eZj; nj++) {
+                if ((ni - i) ** 2 + (nj - j) ** 2 >= treeSpacing ** 2) continue
+                const bId = newOccupancy[ni][nj]
+                if (bId && !idsToRemove.has(bId)) {
+                  const b = buildingMap.get(bId)
+                  if (b && ['TREE', 'TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'].includes(b.type)) {
+                    tooClose = true; break
+                  }
+                }
+              }
+              if (tooClose) break
+            }
+            if (!tooClose) {
+              for (const t of treesToAdd) {
+                if ((t.x - i) ** 2 + (t.z - j) ** 2 < treeSpacing ** 2) {
+                  tooClose = true; break
+                }
+              }
+            }
+
+            if (!tooClose && Math.random() < 0.02) {
               const type = (['TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH'] as const)[Math.floor(Math.random() * 3)]
               maxPickingId++
               const id = Math.random().toString(36).substr(2, 9)

@@ -8,6 +8,7 @@ export const treeSurfaceVertexModule: ShaderModule = {
             uniform sampler2D uTerrainSurface;
             uniform float uTime;
             uniform float uGridSize;
+            attribute float aSink;
             ${BILINEAR_GLSL}
         `,
         begin: `
@@ -25,6 +26,11 @@ export const treeSurfaceVertexModule: ShaderModule = {
             // Sample height from uTerrainSurface (R channel) using bilinear interpolation
             float h = bilinear(uTerrainSurface, sUv, vec2(101.0)).r;
             transformed.y += h / instanceMatrix[1][1];
+
+            // Apply sink to bottom vertices (those with local y < 0.1)
+            if (position.y < 0.1) {
+                transformed.y -= aSink / instanceMatrix[1][1];
+            }
             
             // Wind sway (only for foliage, not trunk)
             float swayFactor = smoothstep(0.1, 1.0, position.y);

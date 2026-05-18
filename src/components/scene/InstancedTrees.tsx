@@ -9,6 +9,7 @@ import { TreeManager } from '../../managers/TreeManager'
 export const InstancedTrees = () => {
   const buildings = useStore((state) => state.buildings)
   const heightTexture = useStore((state) => state.heightTexture)
+  const terrainVertices = useStore((state) => state.terrainVertices)
   const mode = useStore((state) => state.mode)
   const isPickable = mode === 'PLAY'
   
@@ -45,9 +46,10 @@ export const InstancedTrees = () => {
         birch: birchPickingRef.current,
         trunk: trunkPickingRef.current
       },
-      buildings
+      buildings,
+      terrainVertices
     )
-  }, [manager, buildings])
+  }, [manager, buildings, terrainVertices])
 
   useFrame((state) => {
     manager.updateTime(state.clock.getElapsedTime())
@@ -61,24 +63,28 @@ export const InstancedTrees = () => {
     const geo = new THREE.ConeGeometry(0.3, 0.8, 6); 
     geo.translate(0, 0.7, 0); 
     geo.setAttribute('aPickingId', new THREE.InstancedBufferAttribute(new Float32Array(MAX_TREES), 1));
+    geo.setAttribute('aSink', new THREE.InstancedBufferAttribute(new Float32Array(MAX_TREES), 1));
     return geo 
   }, [])
   const deciduousGeo = useMemo(() => { 
     const geo = new THREE.SphereGeometry(0.35, 8, 8); 
     geo.translate(0, 0.65, 0); 
     geo.setAttribute('aPickingId', new THREE.InstancedBufferAttribute(new Float32Array(MAX_TREES), 1));
+    geo.setAttribute('aSink', new THREE.InstancedBufferAttribute(new Float32Array(MAX_TREES), 1));
     return geo 
   }, [])
   const birchGeo = useMemo(() => { 
     const geo = new THREE.SphereGeometry(0.25, 8, 8); 
     geo.translate(0, 0.6, 0); 
     geo.setAttribute('aPickingId', new THREE.InstancedBufferAttribute(new Float32Array(MAX_TREES), 1));
+    geo.setAttribute('aSink', new THREE.InstancedBufferAttribute(new Float32Array(MAX_TREES), 1));
     return geo 
   }, [])
   const trunkGeo = useMemo(() => { 
-    const geo = new THREE.CylinderGeometry(0.05, 0.08, 0.6, 6); 
+    const geo = new THREE.CylinderGeometry(0.05, 0.12, 0.6, 6); 
     geo.translate(0, 0.3, 0); 
     geo.setAttribute('aPickingId', new THREE.InstancedBufferAttribute(new Float32Array(MAX_TREES), 1));
+    geo.setAttribute('aSink', new THREE.InstancedBufferAttribute(new Float32Array(MAX_TREES), 1));
     return geo 
   }, [])
 
