@@ -539,6 +539,27 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
             End of Transcript
           </div>
         </div>
+
+        <div className="h-12 w-[1px] bg-white/10" />
+
+        {/* Developer Attribution */}
+        <div className="shrink-0 flex items-center gap-5 px-2">
+          <div className="flex flex-col items-end justify-center text-right">
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-bold text-white tracking-wide">Dr. Georg Hackenberg</span>
+              <span className="text-[9px] text-white/60 font-bold uppercase tracking-wide mt-0.5">Professor for Industrial Informatics</span>
+              <span className="text-[8px] text-white/40 font-bold uppercase tracking-tight mt-0.5">School of Engineering | FH Upper Austria</span>
+            </div>
+          </div>
+          <div className="h-10 w-10 bg-white/10 p-2 rounded-lg backdrop-blur-sm border border-white/10 flex items-center justify-center">
+            <img
+              src="https://upload.wikimedia.org/wikipedia/de/e/e5/Fhooe-logo.svg"
+              alt="FH Upper Austria"
+              className="w-full h-full object-contain brightness-0 invert opacity-80"
+            />
+          </div>
+        </div>
+
       </footer>
     </div>
   )
