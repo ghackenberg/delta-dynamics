@@ -11,8 +11,8 @@ export const waterSurfaceFragmentModule: ShaderModule = {
             uniform float uBrushStrength;
             uniform int uMode;
             uniform float uTime;
-            uniform vec3 uLayerColors[6];
-            uniform vec3 uLayerHighlightColors[6];
+            uniform vec3 uLayerColors[9];
+            uniform vec3 uLayerHighlightColors[9];
             varying float vDepth;
             varying vec2 vGridUv;
         `,
@@ -54,12 +54,13 @@ export const waterSurfaceFragmentModule: ShaderModule = {
             vec3 terrainColor = uLayerColors[int(cellType + 0.5)];
 
             // Source/Sink Highlight (Energy Pulse) on Water
-            if (rl > 0.5) {
+            if (abs(rl) > 0.001) {
                 float pulse = 0.5 + 0.5 * sin(uTime * 3.0);
-                if (rl < 1.5) { // Source: Cyan/Blue Pulse
-                    waterColor = mix(waterColor, vec3(0.0, 0.8, 1.0), pulse * 0.4);
-                } else if (rl < 2.5) { // Sink: Red/Orange Pulse
-                    waterColor = mix(waterColor, vec3(1.0, 0.2, 0.0), pulse * 0.4);
+                float intensity = clamp(abs(rl), 0.2, 1.0);
+                if (rl > 0.0) { // Source: Cyan/Blue Pulse
+                    waterColor = mix(waterColor, vec3(0.0, 0.8, 1.0), pulse * 0.4 * intensity);
+                } else { // Sink: Red/Orange Pulse
+                    waterColor = mix(waterColor, vec3(1.0, 0.2, 0.0), pulse * 0.4 * intensity);
                 }
             } else {
                 // Boundary Sink Highlight
@@ -69,7 +70,7 @@ export const waterSurfaceFragmentModule: ShaderModule = {
                     float sw = waterData.b;
                     if (sw > 0.01) {
                         float pulse = 0.5 + 0.5 * sin(uTime * 3.0);
-                        waterColor = mix(waterColor, vec3(1.0, 0.2, 0.0), pulse * 0.3);
+                        waterColor = mix(waterColor, vec3(0.5, 0.0, 1.0), pulse * 0.3);
                     }
                 }
             }

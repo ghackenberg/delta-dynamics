@@ -188,6 +188,48 @@ export const paintArea = (
   state: Partial<GameState>
 ): boolean => {
   if (type === 'RAIN') return false
+
+  if (type === 'WATER_SOURCE' || type === 'WATER_SINK') {
+    if (!state.rLevel) return false
+    let changed = false
+    const sigma = radius / 2
+    const sigma2 = 2 * sigma * sigma
+    const startI = Math.max(0, xIdx - radius)
+    const endI = Math.min(GRID_SIZE - 1, xIdx + radius)
+    const startJ = Math.max(0, zIdx - radius)
+    const endJ = Math.min(GRID_SIZE - 1, zIdx + radius)
+
+    for (let i = startI; i <= endI; i++) {
+      for (let j = startJ; j <= endJ; j++) {
+        const dx = i - xIdx
+        const dz = j - zIdx
+        const dist2 = dx * dx + dz * dz
+        if (dist2 > radius * radius) continue
+
+        const weight = Math.exp(-dist2 / sigma2)
+        const amount = strength * weight
+        const idx = j * GRID_SIZE + i
+        
+        if (strength > 0) {
+          // Paint: Add/Subtract based on tool type
+          const delta = type === 'WATER_SOURCE' ? amount : -amount
+          state.rLevel[idx] = Math.max(-5.0, Math.min(5.0, state.rLevel[idx] + delta))
+          changed = true
+        } else {
+          // Erase: Pull towards 0
+          const current = state.rLevel[idx]
+          if (Math.abs(current) > 0.001) {
+            const eraseFactor = Math.abs(strength) * weight
+            if (current > 0) state.rLevel[idx] = Math.max(0, current - eraseFactor)
+            else state.rLevel[idx] = Math.min(0, current + eraseFactor)
+            changed = true
+          }
+        }
+      }
+    }
+    return changed
+  }
+
   let changed = false
   const sigma = radius / 2
   const sigma2 = 2 * sigma * sigma

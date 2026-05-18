@@ -55,7 +55,7 @@ export class TerrainManager {
         const height = totalHeight + TERRAIN_BASE_Y
         
         sData[texIdx] = height
-        sData[texIdx + 1] = rLevel[gridIdx] || -99
+        sData[texIdx + 1] = rLevel[gridIdx] ?? 0.0
         sData[texIdx + 2] = topTypeIdx
         sData[texIdx + 3] = aCap[gridIdx]
       }

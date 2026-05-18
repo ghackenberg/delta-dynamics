@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 import { useMemo, useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
@@ -45,6 +46,43 @@ export const Terrain = () => {
   const selectedBuildingType = useStore((state) => state.selectedBuildingType)
   const hoveredCell = useStore((state) => state.hoveredCell)
   const isCtrlPressed = useStore((state) => state.isCtrlPressed)
+  const brushSize = useStore((state) => state.editorBrushSize)
+  const brushStrength = useStore((state) => state.editorBrushStrength)
+
+  const [gpuSim] = useState(() => new WaterComputeSystem(gl))
+  const terrainManager = useMemo(() => new TerrainManager(), [])
+
+  const layerColors = useMemo(() => {
+    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER', 'RAIN', 'WATER_SOURCE', 'WATER_SINK']
+    return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].color))
+  }, [])
+
+  const layerHighlightColors = useMemo(() => {
+    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER', 'RAIN', 'WATER_SOURCE', 'WATER_SINK']
+    return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].highlightColor))
+  }, [])
+
+  const layerPermeabilities = useMemo(() => {
+    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER', 'RAIN', 'WATER_SOURCE', 'WATER_SINK']
+    return new Float32Array(types.map(t => MATERIAL_PROPERTIES[t].permeability))
+  }, [])
+
+  const aCap = useStore((state) => state.aCap)
+  const terrainVertices = useStore((state) => state.terrainVertices)
+
+  const uniforms = useMemo(() => ({
+    uTerrainLayers: { value: terrainManager.layerTex },
+    uTerrainSurface: { value: terrainManager.surfaceTex },
+    uLayerColors: { value: layerColors },
+    uLayerHighlightColors: { value: layerHighlightColors },
+    uHoveredCell: { value: new THREE.Vector2(-1, -1) },
+    uBrushSize: { value: 1.0 },
+    uBrushStrength: { value: 0.5 },
+    uMode: { value: 0 }, // 0: PLAY, 1: EDITOR
+    waterMap: { value: null as THREE.Texture | null },
+    uTime: { value: 0 },
+    uTileSize: { value: TILE_SIZE }
+  }), [terrainManager, layerColors, layerHighlightColors])
 
   const [isPainting, setIsPainting] = useState(false)
   const [isErasing, setIsErasing] = useState(false)
@@ -70,10 +108,23 @@ export const Terrain = () => {
   }, [isPainting, isErasing])
 
   // Continuous painting in editor mode
-  useFrame(() => {
+  useFrame((state) => {
     if (mode === 'EDITOR' && isCtrlPressed && (isPainting || isErasing) && hoveredCell) {
       paintTerrain(hoveredCell.x, hoveredCell.z, isErasing)
     }
+
+    // Update uniforms
+    uniforms.uTime.value = state.clock.getElapsedTime()
+    uniforms.uMode.value = mode === 'EDITOR' ? 1 : 0
+    uniforms.uBrushSize.value = brushSize
+    uniforms.uBrushStrength.value = brushStrength
+    if (hoveredCell) {
+      uniforms.uHoveredCell.value.set(hoveredCell.x, hoveredCell.z)
+    } else {
+      uniforms.uHoveredCell.value.set(-1, -1)
+    }
+    const waterTex = gpuSim.getWaterTexture()
+    uniforms.waterMap.value = waterTex
   })
 
   // Disable context menu for right-click erasing
@@ -87,27 +138,6 @@ export const Terrain = () => {
 
   const terrainConfig = useMemo(() => getTerrainById(activeTerrainId), [activeTerrainId])
 
-  const [gpuSim] = useState(() => new WaterComputeSystem(gl))
-  const terrainManager = useMemo(() => new TerrainManager(), [])
-
-  const layerColors = useMemo(() => {
-    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
-    return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].color))
-  }, [])
-
-  const layerHighlightColors = useMemo(() => {
-    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
-    return types.map(t => new THREE.Color(MATERIAL_PROPERTIES[t].highlightColor))
-  }, [])
-
-  const layerPermeabilities = useMemo(() => {
-    const types: LayerType[] = ['ROCK', 'GRAVEL', 'SAND', 'HUMUS', 'PAVEMENT', 'WATER']
-    return new Float32Array(types.map(t => MATERIAL_PROPERTIES[t].permeability))
-  }, [])
-
-  const aCap = useStore((state) => state.aCap)
-  const terrainVertices = useStore((state) => state.terrainVertices)
-
   // Update terrain texture when vertices change
   useLayoutEffect(() => {
     gpuSim.setInitialWater(sWater, gWater, tHeight)
@@ -115,20 +145,6 @@ export const Terrain = () => {
     gpuSim.updateMaterialProperties(layerPermeabilities)
     terrainManager.update(terrainVertices, rLevel, aCap)
   }, [gpuSim, terrainVersion, terrainVertices, rLevel, aCap, terrainManager, layerPermeabilities, sWater, gWater, tHeight])
-
-  const uniforms = useMemo(() => ({
-    uTerrainLayers: { value: terrainManager.layerTex },
-    uTerrainSurface: { value: terrainManager.surfaceTex },
-    uLayerColors: { value: layerColors },
-    uLayerHighlightColors: { value: layerHighlightColors },
-    uHoveredCell: { value: new THREE.Vector2(-1, -1) },
-    uBrushSize: { value: 1.0 },
-    uBrushStrength: { value: 0.5 },
-    uMode: { value: 0 }, // 0: PLAY, 1: EDITOR
-    waterMap: { value: null as THREE.Texture | null },
-    uTime: { value: 0 },
-    uTileSize: { value: TILE_SIZE }
-  }), [terrainManager, layerColors, layerHighlightColors])
 
   const staticGeometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(GRID_SIZE * TILE_SIZE, GRID_SIZE * TILE_SIZE, GRID_SIZE, GRID_SIZE)

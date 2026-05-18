@@ -88,6 +88,8 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
     { type: 'HUMUS', label: 'Humus' },
     { type: 'PAVEMENT', label: 'Pavement' },
     { type: 'RAIN', label: 'Rain' },
+    { type: 'WATER_SOURCE', label: 'Water Source' },
+    { type: 'WATER_SINK', label: 'Water Sink' },
   ]
 
   return (

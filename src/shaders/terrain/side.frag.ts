@@ -8,7 +8,7 @@ export const terrainSideFragmentModule: ShaderModule = {
             precision highp sampler2DArray;
             uniform sampler2DArray uTerrainLayers;
             uniform sampler2D uTerrainSurface;
-            uniform vec3 uLayerColors[6];
+            uniform vec3 uLayerColors[9];
             uniform vec2 uVisualRange;
             varying float vWorldY;
             varying float vSurfaceY;

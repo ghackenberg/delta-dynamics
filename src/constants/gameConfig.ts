@@ -19,7 +19,9 @@ export const LAYER_ID_MAP: Record<LayerType, number> = {
   HUMUS: 3,
   PAVEMENT: 4,
   WATER: 5,
-  RAIN: 6
+  RAIN: 6,
+  WATER_SOURCE: 7,
+  WATER_SINK: 8
 }
 
 export const BUILDING_SIZES: Record<BuildingType, { width: number, height: number }> = {
@@ -48,7 +50,9 @@ export const MATERIAL_PROPERTIES: Record<LayerType, { porosity: number, permeabi
   SAND: { porosity: 0.35, permeability: 0.4, color: '#d4c29d', highlightColor: '#e8d8b5' },
   PAVEMENT: { porosity: 0.02, permeability: 0.001, color: '#6b6b6b', highlightColor: '#9c9c9c' },
   WATER: { porosity: 1.0, permeability: 1.0, color: '#4a90e2', highlightColor: '#7ab8ff' },
-  RAIN: { porosity: 0.0, permeability: 0.0, color: '#8af', highlightColor: '#bcf' }
+  RAIN: { porosity: 0.0, permeability: 0.0, color: '#8af', highlightColor: '#bcf' },
+  WATER_SOURCE: { porosity: 0.0, permeability: 0.0, color: '#0ff', highlightColor: '#8ff' },
+  WATER_SINK: { porosity: 0.0, permeability: 0.0, color: '#f0f', highlightColor: '#f8f' }
 }
 
 export const INITIAL_RESOURCES = { food: 500, wood: 200, stone: 100, gold: 100 }

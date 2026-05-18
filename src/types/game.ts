@@ -43,7 +43,7 @@ export interface Animal {
   waitCounter: number
 }
 
-export type LayerType = 'ROCK' | 'GRAVEL' | 'HUMUS' | 'SAND' | 'PAVEMENT' | 'WATER' | 'RAIN'
+export type LayerType = 'ROCK' | 'GRAVEL' | 'HUMUS' | 'SAND' | 'PAVEMENT' | 'WATER' | 'RAIN' | 'WATER_SOURCE' | 'WATER_SINK'
 
 export interface TerrainLayer {
   type: LayerType

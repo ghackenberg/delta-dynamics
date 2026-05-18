@@ -102,9 +102,7 @@ export const riverLakeTerrain: TerrainConfig = {
         const carveAtCenter = getRiverCarve(i + 0.5, j + 0.5)
         if (carveAtCenter > 0.5) {
           if (i < 1) {
-            tempState.rLevel![idx] = 1 // SOURCE
-          } else if (i > GRID_SIZE - 2) {
-            tempState.rLevel![idx] = 2 // SINK
+            tempState.rLevel![idx] = 1.0 // SOURCE
           }
         }
         

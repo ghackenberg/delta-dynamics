@@ -13,8 +13,8 @@ export const terrainSurfaceFragmentModule: ShaderModule = {
             uniform float uBrushStrength;
             uniform int uMode;
             uniform float uTime;
-            uniform vec3 uLayerColors[6];
-            uniform vec3 uLayerHighlightColors[6];
+            uniform vec3 uLayerColors[9];
+            uniform vec3 uLayerHighlightColors[9];
             varying float vType;
             varying vec2 vGridUv;
         `,
@@ -31,12 +31,13 @@ export const terrainSurfaceFragmentModule: ShaderModule = {
             vec3 terrainColor = uLayerColors[typeIdx];
 
             // Source/Sink Highlight (Energy Pulse)
-            if (rl > 0.5) {
+            if (abs(rl) > 0.001) {
                 float pulse = 0.5 + 0.5 * sin(uTime * 3.0);
-                if (rl < 1.5) { // Source: Cyan/Blue Pulse
-                    terrainColor = mix(terrainColor, vec3(0.0, 0.8, 1.0), pulse * 0.4);
-                } else if (rl < 2.5) { // Sink: Red/Orange Pulse
-                    terrainColor = mix(terrainColor, vec3(1.0, 0.2, 0.0), pulse * 0.4);
+                float intensity = clamp(abs(rl), 0.2, 1.0);
+                if (rl > 0.0) { // Source: Cyan/Blue Pulse
+                    terrainColor = mix(terrainColor, vec3(0.0, 0.8, 1.0), pulse * 0.4 * intensity);
+                } else { // Sink: Red/Orange Pulse
+                    terrainColor = mix(terrainColor, vec3(1.0, 0.2, 0.0), pulse * 0.4 * intensity);
                 }
             } else {
                 // Boundary Sink Highlight (if sw > 0 on edge)
@@ -47,7 +48,7 @@ export const terrainSurfaceFragmentModule: ShaderModule = {
                     float sw = waterData.b;
                     if (sw > 0.01) {
                         float pulse = 0.5 + 0.5 * sin(uTime * 3.0);
-                        terrainColor = mix(terrainColor, vec3(1.0, 0.2, 0.0), pulse * 0.3);
+                        terrainColor = mix(terrainColor, vec3(0.5, 0.0, 1.0), pulse * 0.3);
                     }
                 }
             }
