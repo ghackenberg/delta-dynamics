@@ -49,11 +49,14 @@ export const MainMenu = () => {
           </div>
         </div>
 
-        <div className="w-full space-y-12">
+        <div className="w-full space-y-16">
           <section>
-            <div className="flex items-center gap-4 mb-8">
-              <h2 className="text-xs font-black uppercase tracking-[0.4em] text-white/40">Standard Terrain Designs</h2>
-              <div className="flex-1 h-[1px] bg-white/5" />
+            <div className="flex items-center gap-6 mb-10">
+              <div className="flex items-center gap-4">
+                <div className="w-2 h-2 rotate-45 border border-white/20 bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.05)]" />
+                <h2 className="text-xs font-black uppercase tracking-[0.4em] text-white/70">Standard Terrain Designs</h2>
+              </div>
+              <div className="flex-1 h-[1px] bg-gradient-to-r from-white/10 via-white/5 to-transparent" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {standardTerrains.filter(t => t.category === 'STANDARD').map((t) => (
@@ -67,9 +70,12 @@ export const MainMenu = () => {
           </section>
 
           <section>
-            <div className="flex items-center gap-4 mb-8">
-              <h2 className="text-xs font-black uppercase tracking-[0.4em] text-white/40">Custom Terrain Designs</h2>
-              <div className="flex-1 h-[1px] bg-white/5" />
+            <div className="flex items-center gap-6 mb-10">
+              <div className="flex items-center gap-4">
+                <div className="w-2 h-2 rotate-45 border border-white/20 bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.05)]" />
+                <h2 className="text-xs font-black uppercase tracking-[0.4em] text-white/70">Custom Terrain Designs</h2>
+              </div>
+              <div className="flex-1 h-[1px] bg-gradient-to-r from-white/10 via-white/5 to-transparent" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedCustomTerrains.map((t) => (

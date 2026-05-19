@@ -18,7 +18,7 @@ export const TerrainCard = ({ terrain, onDuplicate, onRename, onEdit, onDelete }
     <div className="relative group">
       <div
         onClick={() => navigate(`/play/${terrain.id}`)}
-        className={`w-full relative flex flex-col items-center rounded-[2.5rem] border transition-all duration-500 overflow-hidden backdrop-blur-xl cursor-pointer ${
+        className={`w-full relative flex flex-col items-center rounded-[2.5rem] border transition-all duration-500 overflow-hidden backdrop-blur-xl cursor-pointer group-hover:scale-[1.02] ${
           isStandard
             ? 'border-white/30 bg-white/[0.1] group-hover:bg-white/[0.18] group-hover:border-orange-500/70 group-hover:shadow-[0_20px_50_rgba(0,0,0,0.6),0_0_50px_rgba(249,115,22,0.2)]'
             : 'border-white/30 bg-white/[0.1] group-hover:bg-white/[0.18] group-hover:border-white/50 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.6),0_0_50px_rgba(255,255,255,0.1)]'
