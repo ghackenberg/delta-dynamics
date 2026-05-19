@@ -22,6 +22,10 @@ export const MainMenu = () => {
     navigate(`/duplicate/${terrain.id}`)
   }
 
+  const handleRename = (terrain: TerrainConfig) => {
+    navigate(`/rename/${terrain.id}`)
+  }
+
   const handleEdit = (terrain: TerrainConfig) => {
     navigate(`/edit/${terrain.id}`)
   }
@@ -57,8 +61,6 @@ export const MainMenu = () => {
                   key={t.id} 
                   terrain={t} 
                   onDuplicate={handleDuplicate}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
                 />
               ))}
             </div>
@@ -75,6 +77,7 @@ export const MainMenu = () => {
                   key={t.id} 
                   terrain={t} 
                   onDuplicate={handleDuplicate}
+                  onRename={handleRename}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                 />

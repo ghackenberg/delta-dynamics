@@ -12,6 +12,7 @@ function RouteSync() {
   const playMatch = useMatch('/play/:terrainId')
   const editMatch = useMatch('/edit/:terrainId')
   const duplicateMatch = useMatch('/duplicate/:terrainId')
+  const renameMatch = useMatch('/rename/:terrainId')
   const deleteMatch = useMatch('/delete/:terrainId')
   const menuMatch = useMatch('/')
   const navigate = useNavigate()
@@ -50,6 +51,10 @@ function RouteSync() {
       const terrainId = segments[1]
       navigate('/', { replace: true })
       setTimeout(() => navigate(`/duplicate/${terrainId}`), 0)
+    } else if (segments[0] === 'rename' && segments[1]) {
+      const terrainId = segments[1]
+      navigate('/', { replace: true })
+      setTimeout(() => navigate(`/rename/${terrainId}`), 0)
     } else if (segments[0] === 'delete' && segments[1]) {
       const terrainId = segments[1]
       navigate('/', { replace: true })
@@ -58,7 +63,7 @@ function RouteSync() {
   }, [location.pathname, navigate])
 
   useEffect(() => {
-    if (menuMatch || duplicateMatch || deleteMatch) {
+    if (menuMatch || duplicateMatch || renameMatch || deleteMatch) {
       if (gameState !== 'MENU') setGameState('MENU')
     } else if (playMatch) {
       const { terrainId } = playMatch.params
@@ -75,7 +80,7 @@ function RouteSync() {
         loadTerrain(terrainId)
       }
     }
-  }, [menuMatch, playMatch, editMatch, duplicateMatch, deleteMatch, gameState, mode, activeTerrainId, setGameState, setMode, loadTerrain])
+  }, [menuMatch, playMatch, editMatch, duplicateMatch, renameMatch, deleteMatch, gameState, mode, activeTerrainId, setGameState, setMode, loadTerrain])
 
   return null
 }
@@ -95,6 +100,7 @@ function App() {
         <Route path="/play/:terrainId" element={null} />
         <Route path="/edit/:terrainId" element={null} />
         <Route path="/duplicate/:terrainId" element={null} />
+        <Route path="/rename/:terrainId" element={null} />
         <Route path="/delete/:terrainId" element={null} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

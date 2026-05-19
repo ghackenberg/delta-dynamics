@@ -8,6 +8,7 @@ import { RightSidebar } from './RightSidebar'
 import { BottomBar } from './BottomBar'
 import { LoadingOverlay } from './LoadingOverlay'
 import { DuplicateModal } from './DuplicateModal'
+import { RenameModal } from './RenameModal'
 import { DeleteModal } from './DeleteModal'
 
 interface HUDProps {
@@ -19,6 +20,7 @@ interface HUDProps {
 export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
   const gameState = useStore((state) => state.gameState)
   const duplicateMatch = useMatch('/duplicate/:terrainId')
+  const renameMatch = useMatch('/rename/:terrainId')
   const deleteMatch = useMatch('/delete/:terrainId')
 
   return (
@@ -44,6 +46,9 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
       <LoadingOverlay />
       {duplicateMatch && duplicateMatch.params.terrainId && (
         <DuplicateModal terrainId={duplicateMatch.params.terrainId} />
+      )}
+      {renameMatch && renameMatch.params.terrainId && (
+        <RenameModal terrainId={renameMatch.params.terrainId} />
       )}
       {deleteMatch && deleteMatch.params.terrainId && (
         <DeleteModal terrainId={deleteMatch.params.terrainId} />

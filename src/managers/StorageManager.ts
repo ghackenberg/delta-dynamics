@@ -105,6 +105,31 @@ class StorageManager {
     return newId;
   }
 
+  async renameTerrain(id: string, newName: string): Promise<void> {
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const getRequest = store.get(id);
+
+      getRequest.onerror = () => reject(getRequest.error);
+      getRequest.onsuccess = () => {
+        const terrain = getRequest.result as StoredTerrain;
+        if (!terrain) {
+          reject(new Error(`Terrain with id ${id} not found`));
+          return;
+        }
+
+        terrain.name = newName;
+        terrain.lastModified = Date.now();
+
+        const updateRequest = store.put(terrain);
+        updateRequest.onerror = () => reject(updateRequest.error);
+        updateRequest.onsuccess = () => resolve();
+      };
+    });
+  }
+
   async deleteTerrain(id: string): Promise<void> {
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
