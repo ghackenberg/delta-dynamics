@@ -33,14 +33,6 @@ export const TopBar = () => {
         <div className="h-8 w-[1px] bg-white/10 mx-2" />
 
         <div className="flex gap-4">
-          {mode === 'EDITOR' && (
-            <div className="flex items-center px-4 gap-2 border-r border-white/10 mr-2">
-              <div className={`w-2 h-2 rounded-full ${isDirty ? 'bg-orange-500 animate-pulse' : 'bg-green-500'}`} />
-              <span className={`text-[9px] font-black uppercase tracking-widest ${isDirty ? 'text-orange-500' : 'text-green-500'}`}>
-                {isDirty ? 'Unsaved Changes' : 'Changes Saved'}
-              </span>
-            </div>
-          )}
           <button
             onClick={() => {
               if (mode === 'EDITOR') saveActiveTerrain()
