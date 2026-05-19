@@ -1,10 +1,15 @@
 import { GRID_SIZE } from '../constants/gameConfig'
-import type { TerrainVertex, LayerType, GameState } from '../types/game'
+import type { TerrainVertex, LayerType, GameState, TerrainData } from '../types/game'
 import { getVertexTotalHeight } from '../utils/gameUtils'
 import { updateCellWaterData } from './waterSystem'
 import { terrains } from '../terrains'
+import { storageManager } from '../managers/StorageManager'
 
-export const generateInitialTerrain = (terrainId: string) => {
+export const generateInitialTerrain = async (terrainId: string): Promise<TerrainData> => {
+  if (terrainId.startsWith('custom-')) {
+    const data = await storageManager.getTerrainData(terrainId)
+    if (data) return data
+  }
   const config = terrains.find(t => t.id === terrainId) || terrains[0]
   return config.generate()
 }

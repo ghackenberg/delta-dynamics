@@ -78,8 +78,8 @@ export interface GameSlice {
   spawnAnimal: (type: AnimalType, x?: number, z?: number) => void
   placeBuilding: (x: number, z: number, type: BuildingType) => void
   paintTerrain: (x: number, z: number, isErase: boolean) => void
-  loadTerrain: (terrainId: string) => void
-  resetTerrain: () => void
+  loadTerrain: (terrainId: string) => Promise<void>
+  resetTerrain: () => Promise<void>
   setGameState: (state: 'MENU' | 'PLAY') => void
   setRainIntensity: (intensity: number) => void
   setTextures: (height: THREE.DataTexture, water: THREE.DataTexture) => void
@@ -464,10 +464,10 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
     return state
   }),
 
-  loadTerrain: (terrainId) => {
+  loadTerrain: async (terrainId) => {
     const { 
       vertices, sWater, gWater, tHeight, aCap, rLevel, buildings, occupancyGrid 
-    } = generateInitialTerrain(terrainId)
+    } = await generateInitialTerrain(terrainId)
 
     const initialHumans = [{ 
       id: 'starter', 
@@ -531,8 +531,8 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
     }))
   },
 
-  resetTerrain: () => {
-    get().loadTerrain(get().activeTerrainId)
+  resetTerrain: async () => {
+    await get().loadTerrain(get().activeTerrainId)
   },
 
   setGameState: (gameState) => set((state) => ({ 
