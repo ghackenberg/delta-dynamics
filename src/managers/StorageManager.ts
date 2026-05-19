@@ -87,6 +87,20 @@ class StorageManager {
     });
   }
 
+  async getStoredTerrain(id: string): Promise<StoredTerrain | null> {
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(id);
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        resolve(request.result as StoredTerrain || null);
+      };
+    });
+  }
+
   async duplicateTerrain(source: TerrainConfig, newName?: string): Promise<string> {
     const sourceData = source.generate();
     const newId = `custom-${Date.now()}`;

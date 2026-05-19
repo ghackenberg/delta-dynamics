@@ -20,7 +20,7 @@ export const DeleteModal = ({ terrainId }: DeleteModalProps) => {
       if (found) {
         setTerrain(found)
       } else {
-        navigate('/', { replace: true })
+        navigate(-1)
       }
     }
     loadTerrain()
@@ -32,7 +32,7 @@ export const DeleteModal = ({ terrainId }: DeleteModalProps) => {
     setIsDeleting(true)
     try {
       await storageManager.deleteTerrain(terrain.id)
-      navigate('/', { replace: true })
+      navigate(-1)
     } catch (error) {
       console.error('Failed to delete terrain:', error)
       setIsDeleting(false)
@@ -40,7 +40,7 @@ export const DeleteModal = ({ terrainId }: DeleteModalProps) => {
   }
 
   const handleCancel = () => {
-    navigate('/', { replace: true })
+    navigate(-1)
   }
 
   if (!terrain) return null

@@ -24,7 +24,7 @@ export const RenameModal = ({ terrainId }: RenameModalProps) => {
         setName(found.name)
       } else {
         console.error('Terrain not found for renaming:', terrainId)
-        navigate('/', { replace: true })
+        navigate(-1)
       }
     }
 
@@ -37,7 +37,7 @@ export const RenameModal = ({ terrainId }: RenameModalProps) => {
     setIsSubmitting(true)
     try {
       await storageManager.renameTerrain(terrain.id, name.trim())
-      navigate('/', { replace: true })
+      navigate(-1)
     } catch (error) {
       console.error('Failed to rename terrain:', error)
       setIsSubmitting(false)
@@ -45,7 +45,7 @@ export const RenameModal = ({ terrainId }: RenameModalProps) => {
   }
 
   const handleCancel = () => {
-    navigate('/', { replace: true })
+    navigate(-1)
   }
 
   if (!terrain) return null

@@ -31,7 +31,7 @@ export const DuplicateModal = ({ terrainId }: DuplicateModalProps) => {
         setName(`${source.name} (Copy)`)
       } else {
         console.error('Source terrain not found:', terrainId)
-        navigate('/', { replace: true })
+        navigate(-1)
       }
     }
 
@@ -53,7 +53,7 @@ export const DuplicateModal = ({ terrainId }: DuplicateModalProps) => {
   }
 
   const handleCancel = () => {
-    navigate('/', { replace: true })
+    navigate(-1)
   }
 
   if (!sourceTerrain) return null

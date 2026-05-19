@@ -43,10 +43,7 @@ function RouteSync() {
     } else if (segments[0] === 'edit' && segments[1]) {
       const terrainId = segments[1]
       navigate('/', { replace: true })
-      setTimeout(() => {
-        navigate(`/play/${terrainId}`)
-        setTimeout(() => navigate(`/edit/${terrainId}`), 0)
-      }, 0)
+      setTimeout(() => navigate(`/edit/${terrainId}`), 0)
     } else if (segments[0] === 'duplicate' && segments[1]) {
       const terrainId = segments[1]
       navigate('/', { replace: true })

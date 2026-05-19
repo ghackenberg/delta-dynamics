@@ -4,6 +4,8 @@ import { useStore } from '../../hooks/useStore'
 export const TopBar = () => {
   const navigate = useNavigate()
   const mode = useStore((state) => state.mode)
+  const isDirty = useStore((state) => state.isDirty)
+  const saveActiveTerrain = useStore((state) => state.saveActiveTerrain)
   const fps = useStore((state) => state.fps)
   const fpsHistory = useStore((state) => state.fpsHistory)
   const resources = useStore((state) => state.resources)
@@ -31,20 +33,30 @@ export const TopBar = () => {
         <div className="h-8 w-[1px] bg-white/10 mx-2" />
 
         <div className="flex gap-4">
+          {mode === 'EDITOR' && (
+            <div className="flex items-center px-4 gap-2 border-r border-white/10 mr-2">
+              <div className={`w-2 h-2 rounded-full ${isDirty ? 'bg-orange-500 animate-pulse' : 'bg-green-500'}`} />
+              <span className={`text-[9px] font-black uppercase tracking-widest ${isDirty ? 'text-orange-500' : 'text-green-500'}`}>
+                {isDirty ? 'Unsaved Changes' : 'Changes Saved'}
+              </span>
+            </div>
+          )}
           <button
             onClick={() => {
-              // TODO: Implement save action
-              console.log('Save terrain:', mode)
+              if (mode === 'EDITOR') saveActiveTerrain()
             }}
-            className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 transition-all border border-white/10"
+            className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${
+              mode === 'EDITOR' && isDirty
+                ? 'bg-white/10 text-white hover:bg-white/20 border-white/10'
+                : 'bg-white/5 text-white/20 border-white/5 cursor-not-allowed'
+            }`}
+            disabled={mode !== 'EDITOR' || !isDirty}
           >
             Save
           </button>
           <button
             onClick={() => {
-              if (mode === 'EDITOR') navigate(-2)
-              else if (mode === 'PLAY') navigate(-1)
-              else navigate('/')
+              navigate(-1)
             }}
             className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-red-500/20 transition-all"
           >

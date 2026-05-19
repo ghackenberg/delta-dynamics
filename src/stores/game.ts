@@ -7,7 +7,8 @@ import type {
   TerrainVertex, 
   GameResources, 
   AnimalType,
-  BuildingType
+  BuildingType,
+  TerrainData
 } from '../types/game'
 import { 
   GRID_SIZE, 
@@ -35,6 +36,7 @@ import {
   checkBuildingCost, 
   deductBuildingCost 
 } from '../systems/economySystem'
+import { storageManager } from '../managers/StorageManager'
 import type { EditorSlice } from './editor'
 import type { AiSlice } from './ai'
 import type { UiSlice } from './ui'
@@ -83,6 +85,7 @@ export interface GameSlice {
   setGameState: (state: 'MENU' | 'PLAY') => void
   setRainIntensity: (intensity: number) => void
   setTextures: (height: THREE.DataTexture, water: THREE.DataTexture) => void
+  saveActiveTerrain: () => Promise<void>
 }
 
 export type StoreState = GameSlice & EditorSlice & AiSlice & UiSlice
@@ -314,7 +317,8 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
       buildings, 
       occupancyGrid: newO, 
       humans, 
-      resources: deductBuildingCost(type, state.resources) 
+      resources: deductBuildingCost(type, state.resources),
+      isDirty: state.mode === 'EDITOR' ? true : state.isDirty
     }
   }),
 
@@ -458,7 +462,8 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
       return { 
         terrainVersion: state.terrainVersion + 1,
         buildings: finalBuildings,
-        occupancyGrid: treeUpdateChanged ? newOccupancy : state.occupancyGrid
+        occupancyGrid: treeUpdateChanged ? newOccupancy : state.occupancyGrid,
+        isDirty: state.mode === 'EDITOR' ? true : state.isDirty
       }
     }
     return state
@@ -527,7 +532,8 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
       animals: initialAnimals,
       resources: { ...INITIAL_RESOURCES },
       day: 1,
-      gameTime: 480
+      gameTime: 480,
+      isDirty: false
     }))
   },
 
@@ -542,4 +548,32 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
 
   setRainIntensity: (intensity) => set({ rainIntensity: intensity }),
   setTextures: (height, water) => set({ heightTexture: height, waterTexture: water }),
+
+  saveActiveTerrain: async () => {
+    const state = get()
+    if (!state.activeTerrainId || state.mode !== 'EDITOR') return
+
+    const terrainData: TerrainData = {
+      vertices: state.terrainVertices,
+      sWater: state.sWater,
+      gWater: state.gWater,
+      tHeight: state.tHeight,
+      aCap: state.aCap,
+      rLevel: state.rLevel,
+      buildings: state.buildings,
+      occupancyGrid: state.occupancyGrid,
+    }
+
+    const existing = await storageManager.getStoredTerrain(state.activeTerrainId)
+    if (!existing) return
+
+    const stored = {
+      ...existing,
+      lastModified: Date.now(),
+      terrainData,
+    }
+
+    await storageManager.saveTerrain(stored)
+    set({ isDirty: false })
+  },
 })

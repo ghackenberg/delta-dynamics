@@ -9,6 +9,7 @@ export interface EditorSlice {
   editorBrushStrength: number
   isEditorInteracting: boolean
   isCtrlPressed: boolean
+  isDirty: boolean
   setMode: (mode: GameMode) => void
   setSelectedBuildingType: (type: BuildingType) => void
   setEditorLayerType: (type: LayerType) => void
@@ -16,6 +17,7 @@ export interface EditorSlice {
   setEditorBrushStrength: (strength: number) => void
   setCtrlPressed: (isPressed: boolean) => void
   setEditorInteracting: (isInteracting: boolean) => void
+  setDirty: (isDirty: boolean) => void
 }
 
 export const createEditorSlice: StateCreator<EditorSlice> = (set) => ({
@@ -26,6 +28,7 @@ export const createEditorSlice: StateCreator<EditorSlice> = (set) => ({
   editorBrushStrength: 0.5,
   isEditorInteracting: false,
   isCtrlPressed: false,
+  isDirty: false,
   setMode: (mode) => set({ mode }),
   setSelectedBuildingType: (type) => set({ selectedBuildingType: type }),
   setEditorLayerType: (type) => set({ editorLayerType: type }),
@@ -33,4 +36,5 @@ export const createEditorSlice: StateCreator<EditorSlice> = (set) => ({
   setEditorBrushStrength: (strength) => set({ editorBrushStrength: strength }),
   setCtrlPressed: (isPressed) => set({ isCtrlPressed: isPressed }),
   setEditorInteracting: (isInteracting) => set({ isEditorInteracting: isInteracting }),
+  setDirty: (isDirty) => set({ isDirty }),
 })
