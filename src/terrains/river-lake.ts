@@ -39,6 +39,7 @@ const getRiverCarve = (i: number, j: number) => {
 export const riverLakeTerrain: TerrainConfig = {
   id: 'river-lake',
   name: 'River and Lake',
+  category: 'STANDARD',
   visualRange: [-5, 15],
   getInflow: (gameTime: number) => {
     // 24h cycle: peaks at noon (720), lowest at midnight (0/1440)

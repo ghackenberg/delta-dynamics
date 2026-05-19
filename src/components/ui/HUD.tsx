@@ -125,39 +125,67 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
       )}
 
       {gameState === 'MENU' && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#050505] pointer-events-auto">
-          <div className="w-full max-w-4xl p-12 flex flex-col items-center">
-            <div className="flex items-center gap-6 mb-12">
+        <div className="absolute inset-0 z-50 flex flex-col items-center bg-[#050505] pointer-events-auto overflow-y-auto scrollbar-hide py-12 px-6">
+          <div className="w-full max-w-6xl flex flex-col items-center">
+            <div className="flex flex-col md:flex-row items-center gap-6 mb-16 text-center md:text-left">
               <img src="/icon.svg" alt="Delta Dynamics" className="w-20 h-20 rounded-2xl shadow-2xl border border-white/10" />
               <div className="flex flex-col">
-                <h1 className="text-4xl font-black uppercase tracking-[0.3em] text-white">Delta Dynamics</h1>
+                <h1 className="text-4xl md:text-5xl font-black uppercase tracking-[0.3em] text-white">Delta Dynamics</h1>
                 <p className="text-sm text-white/40 font-bold uppercase tracking-[0.5em] mt-2">Colony Simulator</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-6 w-full">
-              {terrains.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => navigate(`/play/${t.id}`)}
-                  className="group relative flex flex-col items-center p-8 rounded-3xl border-2 border-white/40 bg-[#222] hover:bg-white hover:border-orange-500 hover:shadow-[0_0_40px_rgba(249,115,22,0.4)] transition-all duration-300 overflow-hidden"
-                >
-                  <span className="text-xl font-black uppercase tracking-widest text-white group-hover:text-black mb-2 transition-colors z-10">{t.name}</span>
-                  <span className="text-xs text-white/60 font-bold uppercase tracking-widest group-hover:text-orange-600 transition-colors z-10">{t.id.replace('-', ' ')}</span>
-                  <div className="mt-8 w-16 h-1 bg-white/30 group-hover:w-32 group-hover:bg-orange-500 transition-all duration-500 z-10" />
-                </button>
-              ))}
-              <button
-                onClick={() => navigate('/play/flat')}
-                className="group relative flex flex-col items-center p-8 rounded-3xl border-2 border-dashed border-white/40 bg-[#1a1a1a] hover:bg-white hover:border-white hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-all duration-300"
-              >
-                <span className="text-xl font-black uppercase tracking-widest text-white/70 group-hover:text-black transition-colors z-10">Create New</span>
-                <span className="text-xs text-white/40 font-bold uppercase tracking-widest mt-2 group-hover:text-black/40 transition-colors z-10">Blank Canvas</span>
-                <div className="mt-8 w-16 h-1 bg-white/10 group-hover:w-32 group-hover:bg-black/20 transition-all duration-500 z-10" />
-              </button>
+            <div className="w-full space-y-12">
+              <section>
+                <div className="flex items-center gap-4 mb-8">
+                  <h2 className="text-xs font-black uppercase tracking-[0.4em] text-white/40">Standard Terrain Designs</h2>
+                  <div className="flex-1 h-[1px] bg-white/5" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {terrains.filter(t => t.category === 'STANDARD').map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => navigate(`/play/${t.id}`)}
+                      className="group relative flex flex-col items-center p-8 rounded-3xl border-2 border-white/20 bg-[#1a1a1a] hover:bg-white hover:border-orange-500 hover:shadow-[0_0_40px_rgba(249,115,22,0.3)] transition-all duration-300 overflow-hidden shadow-2xl"
+                    >
+                      <span className="text-xl font-black uppercase tracking-widest text-white group-hover:text-black mb-2 transition-colors z-10">{t.name}</span>
+                      <span className="text-xs text-white/40 font-bold uppercase tracking-widest group-hover:text-orange-600 transition-colors z-10">{t.id.replace('-', ' ')}</span>
+                      <div className="mt-8 w-16 h-1 bg-white/10 group-hover:w-32 group-hover:bg-orange-500 transition-all duration-500 z-10" />
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <div className="flex items-center gap-4 mb-8">
+                  <h2 className="text-xs font-black uppercase tracking-[0.4em] text-white/40">Custom Terrain Designs</h2>
+                  <div className="flex-1 h-[1px] bg-white/5" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {terrains.filter(t => t.category === 'CUSTOM').map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => navigate(`/play/${t.id}`)}
+                      className="group relative flex flex-col items-center p-8 rounded-3xl border-2 border-white/20 bg-[#1a1a1a] hover:bg-white hover:border-white/50 hover:shadow-[0_0_40px_rgba(255,255,255,0.1)] transition-all duration-300 overflow-hidden shadow-2xl"
+                    >
+                      <span className="text-xl font-black uppercase tracking-widest text-white group-hover:text-black mb-2 transition-colors z-10">{t.name}</span>
+                      <span className="text-xs text-white/40 font-bold uppercase tracking-widest group-hover:text-black/40 transition-colors z-10">{t.id.replace('-', ' ')}</span>
+                      <div className="mt-8 w-16 h-1 bg-white/10 group-hover:w-32 group-hover:bg-black/20 transition-all duration-500 z-10" />
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => navigate('/play/flat')}
+                    className="group relative flex flex-col items-center p-8 rounded-3xl border-2 border-dashed border-white/20 bg-transparent hover:bg-white/5 hover:border-white/40 transition-all duration-300"
+                  >
+                    <span className="text-xl font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors z-10">Create New</span>
+                    <span className="text-xs text-white/20 font-bold uppercase tracking-widest mt-2 group-hover:text-white/40 transition-colors z-10">Blank Canvas</span>
+                    <div className="mt-8 w-16 h-1 bg-white/5 group-hover:w-32 group-hover:bg-white/20 transition-all duration-500 z-10" />
+                  </button>
+                </div>
+              </section>
             </div>
 
-            <div className="mt-16 flex flex-col items-center gap-4 opacity-30">
+            <div className="mt-24 mb-12 flex flex-col items-center gap-4 opacity-20">
               <span className="text-[10px] font-black uppercase tracking-[0.4em]">Early Access Build</span>
               <div className="flex gap-8">
                 <span className="text-[9px] font-bold">v0.8.2-delta</span>

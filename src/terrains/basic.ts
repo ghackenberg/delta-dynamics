@@ -7,6 +7,7 @@ import { getCellMaxSlope } from '../systems/terrainSystem'
 export const basicTerrain: TerrainConfig = {
   id: 'basic',
   name: 'Basic Terrain',
+  category: 'STANDARD',
   visualRange: [-5, 5],
   generate: () => {
     const vertices: TerrainVertex[][] = []

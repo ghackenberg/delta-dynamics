@@ -66,6 +66,7 @@ export interface TerrainData {
 export interface TerrainConfig {
   id: string
   name: string
+  category: 'STANDARD' | 'CUSTOM'
   visualRange: [number, number] // [minY, maxY] for rendering sides/depth
   generate: () => TerrainData
   getInflow?: (gameTime: number) => number

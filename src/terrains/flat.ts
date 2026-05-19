@@ -5,6 +5,7 @@ import { updateCellWaterData } from '../systems/waterSystem'
 export const flatTerrain: TerrainConfig = {
   id: 'flat',
   name: 'Flat Land',
+  category: 'STANDARD',
   visualRange: [-5, 5],
   generate: () => {
     const vertices: TerrainVertex[][] = []
