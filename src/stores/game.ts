@@ -50,18 +50,6 @@ const createDataTexture = () => {
 const heightTexture = createDataTexture()
 const waterTexture = createDataTexture()
 
-const activeTerrainId = 'river-lake'
-const { 
-  vertices: initialVertices, 
-  sWater: initialSWater, 
-  gWater: initialGWater, 
-  tHeight: initialTHeight, 
-  aCap: initialACap, 
-  rLevel: initialRLevel, 
-  buildings: initialBuildings, 
-  occupancyGrid: initialOccupancy 
-} = generateInitialTerrain(activeTerrainId)
-
 export interface GameSlice {
   gameState: 'MENU' | 'PLAY'
   gameTime: number 
@@ -108,16 +96,16 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
   rainIntensity: 0,
   resources: { ...INITIAL_RESOURCES }, 
   rates: { food: 0, wood: 0, stone: 0, gold: 0 },
-  buildings: initialBuildings, 
-  occupancyGrid: initialOccupancy, 
-  terrainVertices: initialVertices, 
+  buildings: [], 
+  occupancyGrid: Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null)), 
+  terrainVertices: [], 
   terrainVersion: 0, 
-  activeTerrainId: 'river-lake',
-  sWater: initialSWater, 
-  gWater: initialGWater, 
-  tHeight: initialTHeight, 
-  aCap: initialACap, 
-  rLevel: initialRLevel,
+  activeTerrainId: '',
+  sWater: new Float32Array(GRID_SIZE * GRID_SIZE), 
+  gWater: new Float32Array(GRID_SIZE * GRID_SIZE), 
+  tHeight: new Float32Array(GRID_SIZE * GRID_SIZE), 
+  aCap: new Float32Array(GRID_SIZE * GRID_SIZE), 
+  rLevel: new Float32Array(GRID_SIZE * GRID_SIZE).fill(0),
   heightTexture, 
   waterTexture,
   humans: [],
@@ -524,6 +512,7 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
 
     set((state) => ({
       gameState: 'PLAY',
+      isLoading: true,
       activeTerrainId: terrainId,
       terrainVertices: vertices,
       sWater,
@@ -546,7 +535,10 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
     get().loadTerrain(get().activeTerrainId)
   },
 
-  setGameState: (gameState) => set({ gameState }),
+  setGameState: (gameState) => set((state) => ({ 
+    gameState,
+    isLoading: gameState === 'MENU' ? false : (gameState === 'PLAY' ? true : state.isLoading)
+  })),
 
   setRainIntensity: (intensity) => set({ rainIntensity: intensity }),
   setTextures: (height, water) => set({ heightTexture: height, waterTexture: water }),

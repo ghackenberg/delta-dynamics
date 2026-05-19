@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, useEffect, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../hooks/useStore'
 import type { BuildingType, LayerType } from '../../types/game'
@@ -45,6 +45,28 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
   const fpsHistory = useStore((state) => state.fpsHistory)
 
   const activeTerrainId = useStore((state) => state.activeTerrainId)
+  const isLoading = useStore((state) => state.isLoading)
+
+  // Smooth transition state
+  const [showOverlay, setShowOverlay] = useState(false)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        setShowOverlay(true)
+        setIsTransitioning(true)
+      }, 0)
+      return () => clearTimeout(timer)
+    } else {
+      const timer1 = setTimeout(() => setIsTransitioning(false), 0)
+      const timer2 = setTimeout(() => setShowOverlay(false), 1000)
+      return () => {
+        clearTimeout(timer1)
+        clearTimeout(timer2)
+      }
+    }
+  }, [isLoading])
 
   const hoveredEntity = useMemo(() => {
     if (!hoveredEntityId) return null
@@ -96,12 +118,14 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
   return (
     <div className="relative h-screen w-screen bg-[#050505] text-white overflow-hidden select-none font-sans pointer-events-none">
       {/* Background 3D Scene */}
-      <div className="absolute inset-0 z-0 pointer-events-auto">
-        {children}
-      </div>
+      {gameState !== 'MENU' && (
+        <div className="absolute inset-0 z-0 pointer-events-auto">
+          {children}
+        </div>
+      )}
 
       {gameState === 'MENU' && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md pointer-events-auto">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#050505] pointer-events-auto">
           <div className="w-full max-w-4xl p-12 flex flex-col items-center">
             <div className="flex items-center gap-6 mb-12">
               <img src="/icon.svg" alt="Delta Dynamics" className="w-20 h-20 rounded-2xl shadow-2xl border border-white/10" />
@@ -116,21 +140,20 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
                 <button
                   key={t.id}
                   onClick={() => navigate(`/play/${t.id}`)}
-                  className="group relative flex flex-col items-center p-8 rounded-3xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all duration-500 overflow-hidden"
+                  className="group relative flex flex-col items-center p-8 rounded-3xl border-2 border-white/40 bg-[#222] hover:bg-white hover:border-orange-500 hover:shadow-[0_0_40px_rgba(249,115,22,0.4)] transition-all duration-300 overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <span className="text-lg font-black uppercase tracking-widest text-white/90 group-hover:text-white mb-2 transition-colors">{t.name}</span>
-                  <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest">{t.id.replace('-', ' ')}</span>
-                  <div className="mt-8 w-12 h-[1px] bg-white/10 group-hover:w-20 group-hover:bg-orange-500 transition-all duration-500" />
+                  <span className="text-xl font-black uppercase tracking-widest text-white group-hover:text-black mb-2 transition-colors z-10">{t.name}</span>
+                  <span className="text-xs text-white/60 font-bold uppercase tracking-widest group-hover:text-orange-600 transition-colors z-10">{t.id.replace('-', ' ')}</span>
+                  <div className="mt-8 w-16 h-1 bg-white/30 group-hover:w-32 group-hover:bg-orange-500 transition-all duration-500 z-10" />
                 </button>
               ))}
               <button
                 onClick={() => navigate('/play/flat')}
-                className="group relative flex flex-col items-center p-8 rounded-3xl border border-dashed border-white/20 bg-transparent hover:bg-white/5 hover:border-white/40 transition-all duration-500"
+                className="group relative flex flex-col items-center p-8 rounded-3xl border-2 border-dashed border-white/40 bg-[#1a1a1a] hover:bg-white hover:border-white hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-all duration-300"
               >
-                <span className="text-lg font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Create New</span>
-                <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest mt-2">Blank Canvas</span>
-                <div className="mt-8 w-12 h-[1px] bg-white/10 group-hover:w-20 group-hover:bg-orange-500 transition-all duration-500" />
+                <span className="text-xl font-black uppercase tracking-widest text-white/70 group-hover:text-black transition-colors z-10">Create New</span>
+                <span className="text-xs text-white/40 font-bold uppercase tracking-widest mt-2 group-hover:text-black/40 transition-colors z-10">Blank Canvas</span>
+                <div className="mt-8 w-16 h-1 bg-white/10 group-hover:w-32 group-hover:bg-black/20 transition-all duration-500 z-10" />
               </button>
             </div>
 
@@ -145,502 +168,522 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
         </div>
       )}
 
-      {/* Top Bar Overlay */}
-      <header className="absolute top-0 left-0 right-0 h-16 border-b border-white/10 bg-black/30 backdrop-blur-xl flex items-center px-6 justify-between z-20 shadow-2xl pointer-events-auto">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-3">
-            <img src="/icon.svg" alt="Delta Dynamics" className="w-10 h-10 rounded-lg shadow-2xl border border-white/5" />
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-white font-black">Delta Dynamics</span>
-              <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Colony Simulator</span>
-            </div>
-          </div>
-
-          <div className="h-8 w-[1px] bg-white/10 mx-2" />
-
-          <div className="flex gap-4">
-            <button
-              onClick={() => {
-                if (mode === 'EDITOR') navigate(-1)
-                else if (gameState === 'MENU') navigate(`/play/${activeTerrainId}`)
-              }}
-              className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                mode === 'PLAY' 
-                ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-                : 'text-white/40 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              Play Mode
-            </button>
-            <button
-              onClick={() => {
-                if (mode === 'PLAY') navigate(`/edit/${activeTerrainId}`)
-              }}
-              className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                mode === 'EDITOR' 
-                ? 'bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.4)]' 
-                : 'text-white/40 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              Terrain Editor
-            </button>
-            <button
-              onClick={() => {
-                if (mode === 'EDITOR') navigate(-2)
-                else if (mode === 'PLAY') navigate(-1)
-                else navigate('/')
-              }}
-              className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-red-500/20 transition-all"
-            >
-              Exit to Menu
-            </button>
-          </div>
-
-          <div className="h-8 w-[1px] bg-white/10 mx-2" />
-
-          <div className="flex gap-6">
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Performance</span>
+      {gameState !== 'MENU' && (
+        <>
+          {/* Top Bar Overlay */}
+          <header className="absolute top-0 left-0 right-0 h-16 border-b border-white/10 bg-black/30 backdrop-blur-xl flex items-center px-6 justify-between z-20 shadow-2xl pointer-events-auto">
+            <div className="flex items-center gap-8">
               <div className="flex items-center gap-3">
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-lg font-mono font-bold ${fps < 30 ? 'text-red-500' : fps < 55 ? 'text-yellow-500' : 'text-green-500'}`}>{fps}</span>
-                  <span className="text-[9px] text-white/20 uppercase font-black">fps</span>
-                </div>
-                {/* FPS Line Chart */}
-                <div className="h-6 w-24 bg-white/5 rounded border border-white/5 overflow-hidden">
-                  <svg width="100%" height="100%" viewBox="0 0 100 24" preserveAspectRatio="none" className="block">
-                    <defs>
-                      <linearGradient id="fpsGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={fps < 30 ? '#ef4444' : fps < 55 ? '#eab308' : '#22c55e'} stopOpacity="0.3" />
-                        <stop offset="100%" stopColor={fps < 30 ? '#ef4444' : fps < 55 ? '#eab308' : '#22c55e'} stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    {fpsHistory.length > 1 && (
-                      <>
-                        <path
-                          d={`M 0,24 L ${fpsHistory.map((v, i) => `${(i / (fpsHistory.length - 1)) * 100},${24 - (Math.min(v, 60) / 60) * 20 - 2}`).join(' L ')} L 100,24 Z`}
-                          fill="url(#fpsGradient)"
-                        />
-                        <polyline
-                          fill="none"
-                          stroke={fps < 30 ? '#ef4444' : fps < 55 ? '#eab308' : '#22c55e'}
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          points={fpsHistory
-                            .map((v, i) => `${(i / (fpsHistory.length - 1)) * 100},${24 - (Math.min(v, 60) / 60) * 20 - 2}`)
-                            .join(' ')}
-                        />
-                      </>
-                    )}
-                  </svg>
+                <img src="/icon.svg" alt="Delta Dynamics" className="w-10 h-10 rounded-lg shadow-2xl border border-white/5" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-white font-black">Delta Dynamics</span>
+                  <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Colony Simulator</span>
                 </div>
               </div>
-            </div>
 
-            <div className="h-8 w-[1px] bg-white/10 mx-2" />
+              <div className="h-8 w-[1px] bg-white/10 mx-2" />
 
-            {Object.entries(resources).map(([res, value]) => (
-              <div key={res} className="flex flex-col">
-                <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold">{res}</span>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-lg font-mono font-bold text-white">{Math.floor(value)}</span>
-                  <span className={`text-[9px] font-bold ${rates[res as keyof typeof rates] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {rates[res as keyof typeof rates] >= 0 ? '+' : ''}{rates[res as keyof typeof rates]}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-6">
-          {rainIntensity > 0.1 && (
-            <div className="flex items-center gap-2 bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30 animate-pulse">
-              <span className="text-[10px] text-blue-400 font-black tracking-widest uppercase">Heavy Rain</span>
-            </div>
-          )}
-
-          <div className="flex flex-col items-end">
-            <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold mb-0.5">Day {day}</span>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-mono font-bold text-white">{timeString}</span>
-              {isNight && <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-bold animate-pulse">FAST</span>}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Left Sidebar Overlay */}
-      <aside className="absolute top-20 left-4 bottom-32 w-48 border border-white/10 bg-black/30 backdrop-blur-xl rounded-2xl flex flex-col z-10 overflow-hidden shadow-2xl pointer-events-auto">
-        {mode === 'PLAY' ? (
-          <>
-            <div className="p-4 border-b border-white/5">
-              <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Construction</p>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 scrollbar-hide">
-              {buildings.map((b) => (
+              <div className="flex gap-4">
                 <button
-                  key={b.type}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedBuildingType(b.type);
+                  onClick={() => {
+                    if (mode === 'EDITOR') navigate(-1)
                   }}
-                  className={`flex flex-col items-start p-3 rounded-xl border transition-all shadow-sm group ${
-                    selectedBuildingType === b.type 
-                    ? 'bg-white text-black border-white' 
-                    : 'bg-white/5 text-white/80 border-white/5 hover:bg-white/10 hover:border-white/20'
+                  className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                    mode === 'PLAY' 
+                    ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
+                    : 'text-white/40 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <span className="text-xs font-bold">{b.label}</span>
-                  <span className={`text-[9px] mt-0.5 font-medium ${selectedBuildingType === b.type ? 'text-black/60' : 'text-white/30'}`}>
-                    {b.cost}
-                  </span>
+                  Play Mode
                 </button>
-              ))}
-
-              <div className="mt-4 pt-4 border-t border-white/5">
-                <p className="text-white/40 text-[10px] uppercase tracking-widest font-black mb-3">Simulation</p>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setRainIntensity(1.0);
+                  onClick={() => {
+                    if (mode === 'PLAY') navigate(`/edit/${activeTerrainId}`)
                   }}
-                  className="w-full flex flex-col items-center justify-center p-3 rounded-xl border bg-blue-600/20 text-blue-200 border-blue-500/30 hover:bg-blue-600/30 transition-all shadow-sm"
+                  className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                    mode === 'EDITOR' 
+                    ? 'bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.4)]' 
+                    : 'text-white/40 hover:text-white hover:bg-white/5'
+                  }`}
                 >
-                  <span className="text-[11px] font-bold">Trigger Storm</span>
-                  <span className="text-[9px] mt-0.5 text-blue-200/40">Floods terrain</span>
+                  Terrain Editor
+                </button>
+                <button
+                  onClick={() => {
+                    if (mode === 'EDITOR') navigate(-2)
+                    else if (mode === 'PLAY') navigate(-1)
+                    else navigate('/')
+                  }}
+                  className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-red-500/20 transition-all"
+                >
+                  Exit to Menu
                 </button>
               </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="p-4 border-b border-white/5">
-              <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Paint Tools</p>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4 scrollbar-hide">
-              <div className="space-y-2">
-                <p className="text-white/30 text-[9px] uppercase tracking-widest font-black px-1">Layers</p>
-                {layerTypes.map((l) => (
-                  <button
-                    key={l.type}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditorLayerType(l.type);
-                    }}
-                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all ${
-                      editorLayerType === l.type 
-                      ? 'bg-orange-500 text-white border-orange-400 shadow-lg' 
-                      : 'bg-white/5 text-white/60 border-white/5 hover:bg-white/10'
-                    }`}
-                  >
-                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: MATERIAL_PROPERTIES[l.type].color }} />
-                    <span className="text-[11px] font-bold">{l.label}</span>
-                  </button>
+
+              <div className="h-8 w-[1px] bg-white/10 mx-2" />
+
+              <div className="flex gap-6">
+                <div className="flex flex-col">
+                  <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Performance</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-baseline gap-2">
+                      <span className={`text-lg font-mono font-bold ${fps < 30 ? 'text-red-500' : fps < 55 ? 'text-yellow-500' : 'text-green-500'}`}>{fps}</span>
+                      <span className="text-[9px] text-white/20 uppercase font-black">fps</span>
+                    </div>
+                    {/* FPS Line Chart */}
+                    <div className="h-6 w-24 bg-white/5 rounded border border-white/5 overflow-hidden">
+                      <svg width="100%" height="100%" viewBox="0 0 100 24" preserveAspectRatio="none" className="block">
+                        <defs>
+                          <linearGradient id="fpsGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={fps < 30 ? '#ef4444' : fps < 55 ? '#eab308' : '#22c55e'} stopOpacity="0.3" />
+                            <stop offset="100%" stopColor={fps < 30 ? '#ef4444' : fps < 55 ? '#eab308' : '#22c55e'} stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                        {fpsHistory.length > 1 && (
+                          <>
+                            <path
+                              d={`M 0,24 L ${fpsHistory.map((v, i) => `${(i / (fpsHistory.length - 1)) * 100},${24 - (Math.min(v, 60) / 60) * 20 - 2}`).join(' L ')} L 100,24 Z`}
+                              fill="url(#fpsGradient)"
+                            />
+                            <polyline
+                              fill="none"
+                              stroke={fps < 30 ? '#ef4444' : fps < 55 ? '#eab308' : '#22c55e'}
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              points={fpsHistory
+                                .map((v, i) => `${(i / (fpsHistory.length - 1)) * 100},${24 - (Math.min(v, 60) / 60) * 20 - 2}`)
+                                .join(' ')}
+                            />
+                          </>
+                        )}
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-8 w-[1px] bg-white/10 mx-2" />
+
+                {Object.entries(resources).map(([res, value]) => (
+                  <div key={res} className="flex flex-col">
+                    <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold">{res}</span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-lg font-mono font-bold text-white">{Math.floor(value)}</span>
+                      <span className={`text-[9px] font-bold ${rates[res as keyof typeof rates] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {rates[res as keyof typeof rates] >= 0 ? '+' : ''}{rates[res as keyof typeof rates]}
+                      </span>
+                    </div>
+                  </div>
                 ))}
               </div>
-
-              <div className="space-y-3 px-1 mt-2">
-                <div className="flex justify-between items-center">
-                  <p className="text-white/30 text-[9px] uppercase tracking-widest font-black">Brush Size</p>
-                  <span className="text-[10px] text-white/60 font-mono">{editorBrushSize}</span>
-                </div>
-                <input 
-                  type="range" min="1" max="15" step="1"
-                  value={editorBrushSize}
-                  onChange={(e) => setEditorBrushSize(parseInt(e.target.value))}
-                  className="w-full accent-orange-500"
-                />
-
-                <div className="flex justify-between items-center mt-4">
-                  <p className="text-white/30 text-[9px] uppercase tracking-widest font-black">Strength</p>
-                  <span className="text-[10px] text-white/60 font-mono">{editorBrushStrength.toFixed(2)}</span>
-                </div>
-                <input 
-                  type="range" min="0.01" max="1" step="0.01"
-                  value={editorBrushStrength}
-                  onChange={(e) => setEditorBrushStrength(parseFloat(e.target.value))}
-                  className="w-full accent-orange-500"
-                />
-              </div>
-
-              <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/5">
-                <p className="text-[10px] text-white/40 leading-relaxed font-medium">
-                  <span className="text-white/60 font-bold block mb-1 uppercase tracking-wider text-[9px]">Controls</span>
-                  Hold <span className="text-orange-400 font-black">CTRL</span> to sculpt:<br/>
-                  <span className="text-orange-400">Left Click</span> to paint<br/>
-                  <span className="text-orange-400">Right Click</span> to erase
-                </p>
-              </div>
-
-              <div className="mt-auto pt-4 border-t border-white/5">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (window.confirm('Clear all terrain and entities?')) {
-                      resetTerrain();
-                    }
-                  }}
-                  className="w-full flex flex-col items-center justify-center p-3 rounded-xl border bg-red-600/20 text-red-200 border-red-500/30 hover:bg-red-600/30 transition-all shadow-sm"
-                >
-                  <span className="text-[11px] font-bold">Clear Terrain</span>
-                  <span className="text-[9px] mt-0.5 text-red-200/40">Resets to flat land</span>
-                </button>
-              </div>
             </div>
-          </>
-        )}
-      </aside>
 
-      {/* Right Sidebar Overlay */}
-      <aside className="absolute top-20 right-4 bottom-32 w-80 border border-white/10 bg-black/30 backdrop-blur-xl rounded-2xl flex flex-col z-10 overflow-hidden shadow-2xl pointer-events-auto">
-        <div className="p-4 border-b border-white/5 flex justify-between items-center">
-          <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Information</p>
-          {(hoveredEntity || hoveredCell) && <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />}
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 scrollbar-hide">
-          {hoveredEntity ? (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-              <h2 className="text-xl font-bold text-white mb-1">
-                {'name' in hoveredEntity 
-                  ? hoveredEntity.name 
-                  : hoveredEntity.type.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-              </h2>
-              <p className="text-xs text-white/50 mb-6 font-medium">
-                {(() => {
-                  if ('state' in hoveredEntity) return `Current Status: ${hoveredEntity.state}`
-                  if (hoveredEntity.type.startsWith('TREE')) return 'Nature / Environment'
-                  return `Structure Level ${hoveredEntity.level}`
-                })()}
-              </p>
+            <div className="flex items-center gap-6">
+              {rainIntensity > 0.1 && (
+                <div className="flex items-center gap-2 bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30 animate-pulse">
+                  <span className="text-[10px] text-blue-400 font-black tracking-widest uppercase">Heavy Rain</span>
+                </div>
+              )}
 
-              <div className="space-y-3">
-                {'progress' in hoveredEntity && !hoveredEntity.isReady && (
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                    <div className="flex justify-between text-[10px] text-white/40 font-black uppercase mb-2">
-                      <span>Construction Progress</span>
-                      <span>{Math.floor(hoveredEntity.progress)}%</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden p-[1px]">
-                      <div className="h-full bg-orange-500 rounded-full transition-all duration-300" style={{ width: `${hoveredEntity.progress}%` }} />
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-                    <span className="text-[9px] text-white/30 font-black uppercase block mb-1">Category</span>
-                    <span className="text-xs text-white/90 font-mono">
-                      {(() => {
-                        if ('name' in hoveredEntity) return 'HUMAN'
-                        if (hoveredEntity.type === 'DEER' || hoveredEntity.type === 'WOLF') return 'ANIMAL'
-                        if (hoveredEntity.type.startsWith('TREE')) return 'FLORA'
-                        return 'BUILDING'
-                      })()}
-                    </span>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-                    <span className="text-[9px] text-white/30 font-black uppercase block mb-1">ID Tag</span>
-                    <span className="text-[10px] text-white/50 font-mono truncate block">
-                      #{hoveredEntity.id.slice(0, 8)}
-                    </span>
-                  </div>
+              <div className="flex flex-col items-end">
+                <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold mb-0.5">Day {day}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-mono font-bold text-white">{timeString}</span>
+                  {isNight && <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-bold animate-pulse">FAST</span>}
                 </div>
               </div>
             </div>
-          ) : hoveredCell ? (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="flex justify-between items-baseline mb-6">
-                <h2 className="text-xl font-bold text-white">Grid Sector</h2>
-                <span className="text-sm font-mono text-white/40 font-bold bg-white/5 px-2 py-0.5 rounded">
-                  {hoveredCell.x} : {hoveredCell.z}
-                </span>
-              </div>
+          </header>
 
-              <div className="space-y-6">
-                {/* Overground Water */}
-                <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20">
-                  <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest block mb-4">Surface Water</span>
-                  {(() => {
-                    const idx = hoveredCell.z * GRID_SIZE + hoveredCell.x
-                    const depth = sWater[idx]
-                    const bottom = tHeight[idx]
-                    const top = bottom + depth
-                    return (
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
-                        <div className="flex flex-col">
-                          <span className="text-[9px] text-white/20 uppercase font-black mb-1">Depth</span>
-                          <span className="text-blue-300 font-mono font-bold text-lg">{depth.toFixed(3)}m</span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className="text-[9px] text-white/20 uppercase font-black mb-1">Surface RL</span>
-                          <span className="text-white font-mono font-bold text-lg">{top.toFixed(2)}m</span>
-                        </div>
-                      </div>
-                    )
-                  })()}
+          {/* Left Sidebar Overlay */}
+          <aside className="absolute top-20 left-4 bottom-32 w-48 border border-white/10 bg-black/30 backdrop-blur-xl rounded-2xl flex flex-col z-10 overflow-hidden shadow-2xl pointer-events-auto">
+            {mode === 'PLAY' ? (
+              <>
+                <div className="p-4 border-b border-white/5">
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Construction</p>
                 </div>
+                <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 scrollbar-hide">
+                  {buildings.map((b) => (
+                    <button
+                      key={b.type}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedBuildingType(b.type);
+                      }}
+                      className={`flex flex-col items-start p-3 rounded-xl border transition-all shadow-sm group ${
+                        selectedBuildingType === b.type 
+                        ? 'bg-white text-black border-white' 
+                        : 'bg-white/5 text-white/80 border-white/5 hover:bg-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-xs font-bold">{b.label}</span>
+                      <span className={`text-[9px] mt-0.5 font-medium ${selectedBuildingType === b.type ? 'text-black/60' : 'text-white/30'}`}>
+                        {b.cost}
+                      </span>
+                    </button>
+                  ))}
 
-                {/* Underground Water */}
-                <div className="bg-cyan-500/10 rounded-xl p-4 border border-cyan-500/20">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-[10px] text-cyan-400 font-black uppercase tracking-widest block">Aquifer</span>
-                    {(() => {
-                      const idx = hoveredCell.z * GRID_SIZE + hoveredCell.x
-                      const saturation = (gWater[idx] / (aCap[idx] || 1)) * 100
-                      return (
-                        <span className="text-[10px] text-cyan-400 font-black bg-cyan-400/20 px-2 py-0.5 rounded">
-                          {saturation.toFixed(0)}% SAT
-                        </span>
-                      )
-                    })()}
+                  <div className="mt-4 pt-4 border-t border-white/5">
+                    <p className="text-white/40 text-[10px] uppercase tracking-widest font-black mb-3">Simulation</p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRainIntensity(1.0);
+                      }}
+                      className="w-full flex flex-col items-center justify-center p-3 rounded-xl border bg-blue-600/20 text-blue-200 border-blue-500/30 hover:bg-blue-600/30 transition-all shadow-sm"
+                    >
+                      <span className="text-[11px] font-bold">Trigger Storm</span>
+                      <span className="text-[9px] mt-0.5 text-blue-200/40">Floods terrain</span>
+                    </button>
                   </div>
-                  {(() => {
-                    const idx = hoveredCell.z * GRID_SIZE + hoveredCell.x
-                    const volume = gWater[idx]
-                    const cap = aCap[idx]
-                    const waterTable = tHeight[idx] - 0.5 + (cap > 0 ? (volume / cap) * 0.5 : 0)
-                    return (
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                          <div className="flex flex-col">
-                            <span className="text-[9px] text-white/20 uppercase font-black mb-1">Water Table</span>
-                            <span className="text-cyan-300 font-mono font-bold text-lg">{waterTable.toFixed(2)}m</span>
-                          </div>
-                          <div className="flex flex-col items-end">
-                            <span className="text-[9px] text-white/20 uppercase font-black mb-1">Volume</span>
-                            <span className="text-white/80 font-mono font-bold">{volume.toFixed(3)}m³</span>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })()}
                 </div>
-
-                {/* Terrain Layers */}
-                <div className="space-y-4">
-                  <span className="text-[10px] uppercase tracking-widest text-white/30 font-black block">Soil Profile</span>
+              </>
+            ) : (
+              <>
+                <div className="p-4 border-b border-white/5">
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Paint Tools</p>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4 scrollbar-hide">
                   <div className="space-y-2">
+                    <p className="text-white/30 text-[9px] uppercase tracking-widest font-black px-1">Layers</p>
+                    {layerTypes.map((l) => (
+                      <button
+                        key={l.type}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditorLayerType(l.type);
+                        }}
+                        className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all ${
+                          editorLayerType === l.type 
+                          ? 'bg-orange-500 text-white border-orange-400 shadow-lg' 
+                          : 'bg-white/5 text-white/60 border-white/5 hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: MATERIAL_PROPERTIES[l.type].color }} />
+                        <span className="text-[11px] font-bold">{l.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-3 px-1 mt-2">
+                    <div className="flex justify-between items-center">
+                      <p className="text-white/30 text-[9px] uppercase tracking-widest font-black">Brush Size</p>
+                      <span className="text-[10px] text-white/60 font-mono">{editorBrushSize}</span>
+                    </div>
+                    <input 
+                      type="range" min="1" max="15" step="1"
+                      value={editorBrushSize}
+                      onChange={(e) => setEditorBrushSize(parseInt(e.target.value))}
+                      className="w-full accent-orange-500"
+                    />
+
+                    <div className="flex justify-between items-center mt-4">
+                      <p className="text-white/30 text-[9px] uppercase tracking-widest font-black">Strength</p>
+                      <span className="text-[10px] text-white/60 font-mono">{editorBrushStrength.toFixed(2)}</span>
+                    </div>
+                    <input 
+                      type="range" min="0.01" max="1" step="0.01"
+                      value={editorBrushStrength}
+                      onChange={(e) => setEditorBrushStrength(parseFloat(e.target.value))}
+                      className="w-full accent-orange-500"
+                    />
+                  </div>
+
+                  <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/5">
+                    <p className="text-[10px] text-white/40 leading-relaxed font-medium">
+                      <span className="text-white/60 font-bold block mb-1 uppercase tracking-wider text-[9px]">Controls</span>
+                      Hold <span className="text-orange-400 font-black">CTRL</span> to sculpt:<br/>
+                      <span className="text-orange-400">Left Click</span> to paint<br/>
+                      <span className="text-orange-400">Right Click</span> to erase
+                    </p>
+                  </div>
+
+                  <div className="mt-auto pt-4 border-t border-white/5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm('Clear all terrain and entities?')) {
+                          resetTerrain();
+                        }
+                      }}
+                      className="w-full flex flex-col items-center justify-center p-3 rounded-xl border bg-red-600/20 text-red-200 border-red-500/30 hover:bg-red-600/30 transition-all shadow-sm"
+                    >
+                      <span className="text-[11px] font-bold">Clear Terrain</span>
+                      <span className="text-[9px] mt-0.5 text-red-200/40">Resets to flat land</span>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </aside>
+
+          {/* Right Sidebar Overlay */}
+          <aside className="absolute top-20 right-4 bottom-32 w-80 border border-white/10 bg-black/30 backdrop-blur-xl rounded-2xl flex flex-col z-10 overflow-hidden shadow-2xl pointer-events-auto">
+            <div className="p-4 border-b border-white/5 flex justify-between items-center">
+              <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Information</p>
+              {(hoveredEntity || hoveredCell) && <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />}
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 scrollbar-hide">
+              {hoveredEntity ? (
+                <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                  <h2 className="text-xl font-bold text-white mb-1">
+                    {'name' in hoveredEntity 
+                      ? hoveredEntity.name 
+                      : hoveredEntity.type.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                  </h2>
+                  <p className="text-xs text-white/50 mb-6 font-medium">
                     {(() => {
-                      const vertex = terrainVertices[hoveredCell.x][hoveredCell.z]
-                      let currentTop = vertex.reduce((sum, l) => sum + l.thickness, TERRAIN_BASE_Y)
-                      return [...vertex].reverse().map((layer, idx) => {
-                        const layerBottom = currentTop - layer.thickness
-                        currentTop = layerBottom
+                      if ('state' in hoveredEntity) return `Current Status: ${hoveredEntity.state}`
+                      if (hoveredEntity.type.startsWith('TREE')) return 'Nature / Environment'
+                      return `Structure Level ${hoveredEntity.level}`
+                    })()}
+                  </p>
+
+                  <div className="space-y-3">
+                    {'progress' in hoveredEntity && !hoveredEntity.isReady && (
+                      <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                        <div className="flex justify-between text-[10px] text-white/40 font-black uppercase mb-2">
+                          <span>Construction Progress</span>
+                          <span>{Math.floor(hoveredEntity.progress)}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden p-[1px]">
+                          <div className="h-full bg-orange-500 rounded-full transition-all duration-300" style={{ width: `${hoveredEntity.progress}%` }} />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                        <span className="text-[9px] text-white/30 font-black uppercase block mb-1">Category</span>
+                        <span className="text-xs text-white/90 font-mono">
+                          {(() => {
+                            if ('name' in hoveredEntity) return 'HUMAN'
+                            if (hoveredEntity.type === 'DEER' || hoveredEntity.type === 'WOLF') return 'ANIMAL'
+                            if (hoveredEntity.type.startsWith('TREE')) return 'FLORA'
+                            return 'BUILDING'
+                          })()}
+                        </span>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                        <span className="text-[9px] text-white/30 font-black uppercase block mb-1">ID Tag</span>
+                        <span className="text-[10px] text-white/50 font-mono truncate block">
+                          #{hoveredEntity.id.slice(0, 8)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : hoveredCell ? (
+                <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                  <div className="flex justify-between items-baseline mb-6">
+                    <h2 className="text-xl font-bold text-white">Grid Sector</h2>
+                    <span className="text-sm font-mono text-white/40 font-bold bg-white/5 px-2 py-0.5 rounded">
+                      {hoveredCell.x} : {hoveredCell.z}
+                    </span>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Overground Water */}
+                    <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20">
+                      <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest block mb-4">Surface Water</span>
+                      {(() => {
+                        const idx = hoveredCell.z * GRID_SIZE + hoveredCell.x
+                        const depth = sWater[idx]
+                        const bottom = tHeight[idx]
+                        const top = bottom + depth
                         return (
-                          <div key={idx} className="bg-white/5 rounded-lg p-3 border border-white/5 flex flex-col gap-1">
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-2 h-2 rounded-full border border-white/20 shadow-sm" 
-                                  style={{ backgroundColor: MATERIAL_PROPERTIES[layer.type].color }} 
-                                />
-                                <span className="text-xs text-white/80 font-bold">{layer.type}</span>
-                              </div>
-                              <span className="text-[10px] text-white/40 font-mono">{layer.thickness.toFixed(2)}m</span>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
+                            <div className="flex flex-col">
+                              <span className="text-[9px] text-white/20 uppercase font-black mb-1">Depth</span>
+                              <span className="text-blue-300 font-mono font-bold text-lg">{depth.toFixed(3)}m</span>
                             </div>
-                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full" 
-                                style={{ 
-                                  width: `${(layer.thickness / 5) * 100}%`,
-                                  backgroundColor: MATERIAL_PROPERTIES[layer.type].color,
-                                  opacity: 0.6
-                                }} 
-                              />
+                            <div className="flex flex-col items-end">
+                              <span className="text-[9px] text-white/20 uppercase font-black mb-1">Surface RL</span>
+                              <span className="text-white font-mono font-bold text-lg">{top.toFixed(2)}m</span>
                             </div>
                           </div>
                         )
-                      })
-                    })()}
+                      })()}
+                    </div>
+
+                    {/* Underground Water */}
+                    <div className="bg-cyan-500/10 rounded-xl p-4 border border-cyan-500/20">
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-[10px] text-cyan-400 font-black uppercase tracking-widest block">Aquifer</span>
+                        {(() => {
+                          const idx = hoveredCell.z * GRID_SIZE + hoveredCell.x
+                          const saturation = (gWater[idx] / (aCap[idx] || 1)) * 100
+                          return (
+                            <span className="text-[10px] text-cyan-400 font-black bg-cyan-400/20 px-2 py-0.5 rounded">
+                              {saturation.toFixed(0)}% SAT
+                            </span>
+                          )
+                        })()}
+                      </div>
+                      {(() => {
+                        const idx = hoveredCell.z * GRID_SIZE + hoveredCell.x
+                        const volume = gWater[idx]
+                        const cap = aCap[idx]
+                        const waterTable = tHeight[idx] - 0.5 + (cap > 0 ? (volume / cap) * 0.5 : 0)
+                        return (
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-end">
+                              <div className="flex flex-col">
+                                <span className="text-[9px] text-white/20 uppercase font-black mb-1">Water Table</span>
+                                <span className="text-cyan-300 font-mono font-bold text-lg">{waterTable.toFixed(2)}m</span>
+                              </div>
+                              <div className="flex flex-col items-end">
+                                <span className="text-[9px] text-white/20 uppercase font-black mb-1">Volume</span>
+                                <span className="text-white/80 font-mono font-bold">{volume.toFixed(3)}m³</span>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+
+                    {/* Terrain Layers */}
+                    <div className="space-y-4">
+                      <span className="text-[10px] uppercase tracking-widest text-white/30 font-black block">Soil Profile</span>
+                      <div className="space-y-2">
+                        {(() => {
+                          const vertex = terrainVertices[hoveredCell.x][hoveredCell.z]
+                          let currentTop = vertex.reduce((sum, l) => sum + l.thickness, TERRAIN_BASE_Y)
+                          return [...vertex].reverse().map((layer, idx) => {
+                            const layerBottom = currentTop - layer.thickness
+                            currentTop = layerBottom
+                            return (
+                              <div key={idx} className="bg-white/5 rounded-lg p-3 border border-white/5 flex flex-col gap-1">
+                                <div className="flex justify-between items-center">
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-2 h-2 rounded-full border border-white/20 shadow-sm" 
+                                      style={{ backgroundColor: MATERIAL_PROPERTIES[layer.type].color }} 
+                                    />
+                                    <span className="text-xs text-white/80 font-bold">{layer.type}</span>
+                                  </div>
+                                  <span className="text-[10px] text-white/40 font-mono">{layer.thickness.toFixed(2)}m</span>
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full" 
+                                    style={{ 
+                                      width: `${(layer.thickness / 5) * 100}%`,
+                                      backgroundColor: MATERIAL_PROPERTIES[layer.type].color,
+                                      opacity: 0.6
+                                    }} 
+                                  />
+                                </div>
+                              </div>
+                            )
+                          })
+                        })()}
+                      </div>
+                    </div>
                   </div>
                 </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+                  <div className="w-12 h-12 rounded-full border-2 border-dashed border-white mb-4 animate-[spin_10s_linear_infinite]" />
+                  <p className="text-[10px] uppercase tracking-[0.3em] font-black">No Selection</p>
+                  <p className="text-[9px] mt-2">Hover over entities or terrain<br/>to inspect details</p>
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* Bottom Bar Overlay: AI Advisor */}
+          <footer className="absolute bottom-4 left-4 right-4 h-24 border border-white/10 bg-black/30 backdrop-blur-xl rounded-2xl flex items-center px-6 gap-6 z-20 shadow-2xl pointer-events-auto">
+            {/* AI Status & Trigger */}
+            <div className="w-48 shrink-0 flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${isAiLoading ? 'bg-yellow-400 animate-pulse' : aiStatus.includes('Ready') ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.4)]' : 'bg-red-400'}`} />
+                <span className="text-white/60 text-[10px] font-black uppercase tracking-widest">{aiStatus}</span>
+              </div>
+              
+              {aiStatus === 'AI Ready' ? (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onConsultAI(); }}
+                  className="w-full bg-orange-600/80 hover:bg-orange-600 text-white py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 border border-orange-500/20"
+                >
+                  Consult Advisor
+                </button>
+              ) : aiStatus === 'Idle' ? (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onInitAI(); }}
+                  className="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 border border-white/10"
+                >
+                  Initialize AI
+                </button>
+              ) : (
+                <div className="w-full bg-white/5 text-white/20 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-center border border-white/5">
+                  {isAiLoading ? 'Processing...' : 'Unavailable'}
+                </div>
+              )}
+            </div>
+
+            <div className="h-12 w-[1px] bg-white/10" />
+
+            {/* AI Narrative Content */}
+            <div className="flex-1 h-16 overflow-hidden relative group">
+              {aiResponse ? (
+                <div className="h-full overflow-y-auto pr-4 scrollbar-hide animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-white/20 font-black mb-1">Advisor Logs</p>
+                  <div className="text-sm text-white/90 leading-relaxed font-serif italic">
+                    "{aiResponse}"
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full flex items-center text-white/10 italic text-sm">
+                  Waiting for advisor input...
+                </div>
+              )}
+              <div className="absolute bottom-0 right-4 pointer-events-none text-[8px] text-white/5 uppercase font-black tracking-widest group-hover:text-white/20 transition-colors">
+                End of Transcript
               </div>
             </div>
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
-              <div className="w-12 h-12 rounded-full border-2 border-dashed border-white mb-4 animate-[spin_10s_linear_infinite]" />
-              <p className="text-[10px] uppercase tracking-[0.3em] font-black">No Selection</p>
-              <p className="text-[9px] mt-2">Hover over entities or terrain<br/>to inspect details</p>
-            </div>
-          )}
-        </div>
-      </aside>
 
-      {/* Bottom Bar Overlay: AI Advisor */}
-      <footer className="absolute bottom-4 left-4 right-4 h-24 border border-white/10 bg-black/30 backdrop-blur-xl rounded-2xl flex items-center px-6 gap-6 z-20 shadow-2xl pointer-events-auto">
-        {/* AI Status & Trigger */}
-        <div className="w-48 shrink-0 flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className={`w-2 h-2 rounded-full ${isAiLoading ? 'bg-yellow-400 animate-pulse' : aiStatus.includes('Ready') ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.4)]' : 'bg-red-400'}`} />
-            <span className="text-white/60 text-[10px] font-black uppercase tracking-widest">{aiStatus}</span>
-          </div>
-          
-          {aiStatus === 'AI Ready' ? (
-            <button 
-              onClick={(e) => { e.stopPropagation(); onConsultAI(); }}
-              className="w-full bg-orange-600/80 hover:bg-orange-600 text-white py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 border border-orange-500/20"
-            >
-              Consult Advisor
-            </button>
-          ) : aiStatus === 'Idle' ? (
-            <button 
-              onClick={(e) => { e.stopPropagation(); onInitAI(); }}
-              className="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 border border-white/10"
-            >
-              Initialize AI
-            </button>
-          ) : (
-             <div className="w-full bg-white/5 text-white/20 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-center border border-white/5">
-               {isAiLoading ? 'Processing...' : 'Unavailable'}
-             </div>
-          )}
-        </div>
+            <div className="h-12 w-[1px] bg-white/10" />
 
-        <div className="h-12 w-[1px] bg-white/10" />
-
-        {/* AI Narrative Content */}
-        <div className="flex-1 h-16 overflow-hidden relative group">
-          {aiResponse ? (
-            <div className="h-full overflow-y-auto pr-4 scrollbar-hide animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <p className="text-[9px] uppercase tracking-[0.2em] text-white/20 font-black mb-1">Advisor Logs</p>
-              <div className="text-sm text-white/90 leading-relaxed font-serif italic">
-                "{aiResponse}"
+            {/* Developer Attribution */}
+            <div className="shrink-0 flex items-center gap-5 px-2">
+              <div className="flex flex-col items-end justify-center text-right">
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-bold text-white tracking-wide">Dr. Georg Hackenberg</span>
+                  <span className="text-[9px] text-white/60 font-bold uppercase tracking-wide mt-0.5">Professor for Industrial Informatics</span>
+                  <span className="text-[8px] text-white/40 font-bold uppercase tracking-tight mt-0.5">School of Engineering | FH Upper Austria</span>
+                </div>
+              </div>
+              <div className="h-10 w-10 bg-white/10 p-2 rounded-lg backdrop-blur-sm border border-white/10 flex items-center justify-center">
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/de/e/e5/Fhooe-logo.svg"
+                  alt="FH Upper Austria"
+                  className="w-full h-full object-contain brightness-0 invert opacity-80"
+                />
               </div>
             </div>
-          ) : (
-            <div className="h-full flex items-center text-white/10 italic text-sm">
-              Waiting for advisor input...
+
+          </footer>
+        </>
+      )}
+
+      {showOverlay && (
+        <div className={`absolute inset-0 z-[100] flex items-center justify-center bg-[#050505] pointer-events-auto transition-opacity duration-1000 ease-in-out ${isTransitioning ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`flex flex-col items-center gap-8 transition-transform duration-1000 ease-out ${isTransitioning ? 'scale-100' : 'scale-110'}`}>
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full border-2 border-white/5 border-t-orange-500 animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <img src="/icon.svg" alt="Loading" className="w-10 h-10 opacity-20 animate-pulse" />
+              </div>
             </div>
-          )}
-          <div className="absolute bottom-0 right-4 pointer-events-none text-[8px] text-white/5 uppercase font-black tracking-widest group-hover:text-white/20 transition-colors">
-            End of Transcript
-          </div>
-        </div>
-
-        <div className="h-12 w-[1px] bg-white/10" />
-
-        {/* Developer Attribution */}
-        <div className="shrink-0 flex items-center gap-5 px-2">
-          <div className="flex flex-col items-end justify-center text-right">
-            <div className="flex flex-col items-end">
-              <span className="text-sm font-bold text-white tracking-wide">Dr. Georg Hackenberg</span>
-              <span className="text-[9px] text-white/60 font-bold uppercase tracking-wide mt-0.5">Professor for Industrial Informatics</span>
-              <span className="text-[8px] text-white/40 font-bold uppercase tracking-tight mt-0.5">School of Engineering | FH Upper Austria</span>
+            <div className="flex flex-col items-center text-center">
+              <h2 className="text-2xl font-black uppercase tracking-[0.6em] text-white mb-3">Initializing</h2>
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.4em]">Preparing simulation environment</p>
             </div>
           </div>
-          <div className="h-10 w-10 bg-white/10 p-2 rounded-lg backdrop-blur-sm border border-white/10 flex items-center justify-center">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/de/e/e5/Fhooe-logo.svg"
-              alt="FH Upper Austria"
-              className="w-full h-full object-contain brightness-0 invert opacity-80"
-            />
-          </div>
         </div>
-
-      </footer>
+      )}
     </div>
   )
 }

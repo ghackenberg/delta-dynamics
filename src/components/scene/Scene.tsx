@@ -13,10 +13,12 @@ import { GRID_SIZE, TILE_SIZE } from '../../constants/gameConfig'
 
 export const Scene = () => {
   const activeTerrainId = useStore((state) => state.activeTerrainId)
+  const gameState = useStore((state) => state.gameState)
   const isEditorInteracting = useStore((state) => state.isEditorInteracting)
   const controlsRef = useRef<MapControlsImpl>(null)
 
   useEffect(() => {
+    if (gameState === 'MENU') return
     const terrainConfig = getTerrainById(activeTerrainId)
     if (controlsRef.current) {
       const controls = controlsRef.current
@@ -37,7 +39,7 @@ export const Scene = () => {
       controls.target.set(tx, ty, tz)
       controls.update()
     }
-  }, [activeTerrainId])
+  }, [activeTerrainId, gameState])
 
   return (
     <>
@@ -45,9 +47,13 @@ export const Scene = () => {
       <PickingSystem />
       <DayNightCycle />
 
-      <Terrain />
-      <GameGrid />
-      <RainEffect />
+      {gameState !== 'MENU' && (
+        <>
+          <Terrain />
+          <GameGrid />
+          <RainEffect />
+        </>
+      )}
 
       <ContactShadows position={[0, -2, 0]} opacity={0.4} scale={40} blur={2} far={10} />
       <Environment preset="city" />

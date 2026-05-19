@@ -49,6 +49,9 @@ export const Terrain = () => {
   const brushSize = useStore((state) => state.editorBrushSize)
   const brushStrength = useStore((state) => state.editorBrushStrength)
 
+  const setIsLoading = useStore((state) => state.setIsLoading)
+  const isLoading = useStore((state) => state.isLoading)
+
   const [gpuSim] = useState(() => new WaterComputeSystem(gl))
   const terrainManager = useMemo(() => new TerrainManager(), [])
 
@@ -108,7 +111,14 @@ export const Terrain = () => {
   }, [isPainting, isErasing])
 
   // Continuous painting in editor mode
+  const hasRendered = useMemo(() => ({ current: false }), [])
+
   useFrame((state) => {
+    if (isLoading && !hasRendered.current) {
+      setIsLoading(false)
+      hasRendered.current = true
+    }
+
     if (mode === 'EDITOR' && isCtrlPressed && (isPainting || isErasing) && hoveredCell) {
       paintTerrain(hoveredCell.x, hoveredCell.z, isErasing)
     }
