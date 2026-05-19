@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useStore } from '../../hooks/useStore'
 import { terrains as standardTerrains } from '../../terrains'
 import { storageManager } from '../../managers/StorageManager'
@@ -6,6 +7,8 @@ import type { TerrainConfig } from '../../types/game'
 import { TerrainCard } from './TerrainCard'
 
 export const MainMenu = () => {
+  const navigate = useNavigate()
+  const location = useLocation()
   const gameState = useStore((state) => state.gameState)
   const [customTerrains, setCustomTerrains] = useState<TerrainConfig[]>([])
 
@@ -13,25 +16,18 @@ export const MainMenu = () => {
     if (gameState === 'MENU') {
       storageManager.getCustomTerrains().then(setCustomTerrains)
     }
-  }, [gameState])
+  }, [gameState, location.pathname])
 
-  const handleDuplicate = async (terrain: TerrainConfig) => {
-    await storageManager.duplicateTerrain(terrain)
-    const updated = await storageManager.getCustomTerrains()
-    setCustomTerrains(updated)
+  const handleDuplicate = (terrain: TerrainConfig) => {
+    navigate(`/duplicate/${terrain.id}`)
   }
 
   const handleEdit = (terrain: TerrainConfig) => {
-    // TODO: Implement edit action
-    console.log('Edit terrain:', terrain.id)
+    navigate(`/edit/${terrain.id}`)
   }
 
-  const handleDelete = async (terrain: TerrainConfig) => {
-    // TODO: Implement delete action
-    // await storageManager.deleteTerrain(terrain.id)
-    // const updated = await storageManager.getCustomTerrains()
-    // setCustomTerrains(updated)
-    console.log('Delete terrain:', terrain.id)
+  const handleDelete = (terrain: TerrainConfig) => {
+    navigate(`/delete/${terrain.id}`)
   }
 
   const sortedCustomTerrains = useMemo(() => {
@@ -45,7 +41,7 @@ export const MainMenu = () => {
           <img src="/icon.svg" alt="Delta Dynamics" className="w-20 h-20 rounded-2xl shadow-2xl border border-white/10" />
           <div className="flex flex-col">
             <h1 className="text-4xl md:text-5xl font-black uppercase tracking-[0.3em] text-white">Delta Dynamics</h1>
-            <p className="text-sm text-white/40 font-bold uppercase tracking-[0.5em] mt-2">Colony Simulator</p>
+            <p className="text-sm text-white/40 font-bold uppercase tracking-[0.5em] mt-2">Ecosystem Simulator</p>
           </div>
         </div>
 

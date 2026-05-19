@@ -4,7 +4,6 @@ import { useStore } from '../../hooks/useStore'
 export const TopBar = () => {
   const navigate = useNavigate()
   const mode = useStore((state) => state.mode)
-  const activeTerrainId = useStore((state) => state.activeTerrainId)
   const fps = useStore((state) => state.fps)
   const fpsHistory = useStore((state) => state.fpsHistory)
   const resources = useStore((state) => state.resources)
@@ -25,7 +24,7 @@ export const TopBar = () => {
           <img src="/icon.svg" alt="Delta Dynamics" className="w-10 h-10 rounded-lg shadow-2xl border border-white/5" />
           <div className="flex flex-col">
             <span className="text-[10px] uppercase tracking-[0.2em] text-white font-black">Delta Dynamics</span>
-            <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Colony Simulator</span>
+            <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Ecosystem Simulator</span>
           </div>
         </div>
 
@@ -34,27 +33,12 @@ export const TopBar = () => {
         <div className="flex gap-4">
           <button
             onClick={() => {
-              if (mode === 'EDITOR') navigate(-1)
+              // TODO: Implement save action
+              console.log('Save terrain:', mode)
             }}
-            className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-              mode === 'PLAY' 
-              ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-              : 'text-white/40 hover:text-white hover:bg-white/5'
-            }`}
+            className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 transition-all border border-white/10"
           >
-            Play Mode
-          </button>
-          <button
-            onClick={() => {
-              if (mode === 'PLAY') navigate(`/edit/${activeTerrainId}`)
-            }}
-            className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-              mode === 'EDITOR' 
-              ? 'bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.4)]' 
-              : 'text-white/40 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            Terrain Editor
+            Save
           </button>
           <button
             onClick={() => {

@@ -87,14 +87,14 @@ class StorageManager {
     });
   }
 
-  async duplicateTerrain(source: TerrainConfig): Promise<string> {
+  async duplicateTerrain(source: TerrainConfig, newName?: string): Promise<string> {
     const sourceData = source.generate();
     const newId = `custom-${Date.now()}`;
-    const newName = `${source.name} (Copy)`;
+    const name = newName || `${source.name} (Copy)`;
     
     const stored: StoredTerrain = {
       id: newId,
-      name: newName,
+      name: name,
       category: 'CUSTOM',
       lastModified: Date.now(),
       visualRange: source.visualRange,
@@ -103,6 +103,18 @@ class StorageManager {
 
     await this.saveTerrain(stored);
     return newId;
+  }
+
+  async deleteTerrain(id: string): Promise<void> {
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.delete(id);
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+    });
   }
 }
 
