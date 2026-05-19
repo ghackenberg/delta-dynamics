@@ -5,6 +5,7 @@ import { RainEffect } from './RainEffect'
 import { DayNightCycle } from './DayNightCycle'
 import { PickingSystem } from './PickingSystem'
 import { PerformanceSystem } from './PerformanceSystem'
+import { ScreenshotSystem } from './ScreenshotSystem'
 import { useStore } from '../../hooks/useStore'
 import { getTerrainById } from '../../terrains'
 import { useEffect, useRef } from 'react'
@@ -46,6 +47,7 @@ export const Scene = () => {
       <PerformanceSystem />
       <PickingSystem />
       <DayNightCycle />
+      <ScreenshotSystem />
 
       {gameState !== 'MENU' && (
         <>

@@ -75,6 +75,7 @@ export interface GameSlice {
   humans: Human[]
   animals: Animal[]
   rainIntensity: number
+  screenshotProvider: (() => Promise<string>) | null
   tick: () => void
   spawnHuman: (homeId: string) => void
   spawnAnimal: (type: AnimalType, x?: number, z?: number) => void
@@ -85,6 +86,8 @@ export interface GameSlice {
   setGameState: (state: 'MENU' | 'PLAY') => void
   setRainIntensity: (intensity: number) => void
   setTextures: (height: THREE.DataTexture, water: THREE.DataTexture) => void
+  setGameTime: (time: number) => void
+  setScreenshotProvider: (provider: (() => Promise<string>) | null) => void
   saveActiveTerrain: () => Promise<void>
 }
 
@@ -113,6 +116,7 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
   waterTexture,
   humans: [],
   animals: [],
+  screenshotProvider: null,
 
   tick: () => {
     const state = get()
@@ -549,6 +553,10 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
   setRainIntensity: (intensity) => set({ rainIntensity: intensity }),
   setTextures: (height, water) => set({ heightTexture: height, waterTexture: water }),
 
+  setGameTime: (time) => set({ gameTime: time }),
+
+  setScreenshotProvider: (provider) => set({ screenshotProvider: provider }),
+
   saveActiveTerrain: async () => {
     const state = get()
     if (!state.activeTerrainId || state.mode !== 'EDITOR') return
@@ -567,10 +575,20 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
     const existing = await storageManager.getStoredTerrain(state.activeTerrainId)
     if (!existing) return
 
+    let preview = existing.preview
+    if (state.screenshotProvider) {
+      try {
+        preview = await state.screenshotProvider()
+      } catch (err) {
+        console.error('Failed to capture preview:', err)
+      }
+    }
+
     const stored = {
       ...existing,
       lastModified: Date.now(),
       terrainData,
+      preview,
     }
 
     await storageManager.saveTerrain(stored)

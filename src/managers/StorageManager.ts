@@ -11,6 +11,7 @@ export interface StoredTerrain {
   lastModified: number;
   visualRange: [number, number];
   terrainData: TerrainData;
+  preview?: string;
 }
 
 class StorageManager {
@@ -65,6 +66,7 @@ class StorageManager {
           category: 'CUSTOM',
           lastModified: stored.lastModified,
           visualRange: stored.visualRange,
+          preview: stored.preview,
           generate: () => structuredClone(stored.terrainData), // Correctly clones typed arrays
         }));
         resolve(configs);
@@ -113,6 +115,7 @@ class StorageManager {
       lastModified: Date.now(),
       visualRange: source.visualRange,
       terrainData: sourceData,
+      preview: source.preview,
     };
 
     await this.saveTerrain(stored);

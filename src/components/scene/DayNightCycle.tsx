@@ -28,12 +28,16 @@ export const DayNightCycle = () => {
     state.scene.background = new THREE.Color(skyR, skyG, skyB)
 
     if (ambientRef.current) {
-      ambientRef.current.intensity = 0.02 + intensityFactor * 0.25
+      // Increased base ambient for better visibility at night
+      ambientRef.current.intensity = 0.15 + intensityFactor * 0.2
+      ambientRef.current.name = 'main-ambient-light'
     }
     
     if (dirLightRef.current) {
       dirLightRef.current.position.set(x, y, z)
-      dirLightRef.current.intensity = intensityFactor * 2.5
+      // Slightly more powerful sun
+      dirLightRef.current.intensity = intensityFactor * 3.0
+      dirLightRef.current.name = 'main-dir-light'
     }
   })
 

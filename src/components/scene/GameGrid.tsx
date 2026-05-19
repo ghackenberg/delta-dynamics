@@ -137,7 +137,7 @@ export const GameGrid = () => {
 
     if (isTreeType) {
       previewMesh = (
-        <group key="preview" position={[worldX, hCenter, worldZ]}>
+        <group key="preview" name="building-placement-preview" position={[worldX, hCenter, worldZ]}>
           <mesh position={[0, 0.25, 0]} castShadow>
             <cylinderGeometry args={[selectedBuildingType === 'TREE_BIRCH' ? 0.03 : 0.05, 0.1, 1.0, 6]} />
             <meshStandardMaterial color={colors.corpus} transparent opacity={0.4} />
@@ -162,7 +162,7 @@ export const GameGrid = () => {
       )
     } else if (selectedBuildingType === 'FENCE') {
        previewMesh = (
-        <group key="preview" position={[worldX, hCenter, worldZ]}>
+        <group key="preview" name="building-placement-preview" position={[worldX, hCenter, worldZ]}>
           <mesh position={[0, 0.25, 0]} castShadow>
             <boxGeometry args={[0.05, 0.5, 0.2]} />
             <meshStandardMaterial color={colors.corpus} transparent opacity={0.4} />
@@ -172,7 +172,7 @@ export const GameGrid = () => {
     } else if (selectedBuildingType !== 'ROAD' && selectedBuildingType !== 'EXCAVATE' && selectedBuildingType !== 'FILL') {
       const meshScale = size.width * TILE_SIZE * 0.8
       previewMesh = (
-        <group key="preview" position={[worldX, hCenter, worldZ]}>
+        <group key="preview" name="building-placement-preview" position={[worldX, hCenter, worldZ]}>
           <group scale={0.8}>
             <mesh position={[0, meshScale / 3, 0]} castShadow>
               <boxGeometry args={[meshScale, meshScale / 1.5, meshScale]} />
