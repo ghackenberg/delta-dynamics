@@ -91,7 +91,7 @@ self.onmessage = async (e: MessageEvent) => {
     if (!renderer || !canvas) {
       canvas = new OffscreenCanvas(width, height)
       renderer = new THREE.WebGLRenderer({ 
-        canvas: canvas as any, 
+        canvas: canvas as EventTarget as HTMLCanvasElement, 
         antialias: true,
         alpha: true 
       })

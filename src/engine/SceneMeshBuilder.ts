@@ -138,6 +138,7 @@ export const createBuildingGroup = (
   width: number,
   _height: number
 ): THREE.Group => {
+  void _height
   const group = new THREE.Group()
   const colors = BUILDING_COLORS[type] || BUILDING_COLORS.DEFAULT
 
@@ -213,6 +214,7 @@ export const createBuildingGroup = (
  * Creates the preview mesh shown when placing a building.
  */
 export const createPlacementPreviewGroup = (type: string, width: number, _height: number): THREE.Group => {
+  void _height
   const group = new THREE.Group()
   const colors = BUILDING_COLORS[type] || BUILDING_COLORS.DEFAULT
 

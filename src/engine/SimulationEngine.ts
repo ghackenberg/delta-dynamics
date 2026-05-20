@@ -87,7 +87,7 @@ export class SimulationEngine {
   public animalManager!: AnimalManager
 
   // Shared Terrain & Water Uniforms
-  public uniforms: any
+  public uniforms!: Record<string, THREE.IUniform>
 
   // Geometries
   public staticGeometry!: THREE.PlaneGeometry
@@ -184,7 +184,7 @@ export class SimulationEngine {
   private fpsFrames = 0
 
   // Event listeners refs for cleanup
-  private listeners: { element: HTMLElement | Window, type: string, handler: any }[] = []
+  private listeners: { element: EventTarget, type: string, handler: EventListenerOrEventListenerObject }[] = []
 
   constructor(canvas: HTMLCanvasElement | OffscreenCanvas, options: { interactive?: boolean } = {}) {
     this.canvas = canvas
@@ -520,12 +520,12 @@ export class SimulationEngine {
 
     // Instanced Trees Meshes
     this.instancedTrees = {
-      conifer: new THREE.InstancedMesh(this.treeConiferGeometry, undefined as any, MAX_TREES),
-      coniferTrunk: new THREE.InstancedMesh(this.treeConiferTrunkGeometry, undefined as any, MAX_TREES),
-      deciduous: new THREE.InstancedMesh(this.treeDeciduousGeometry, undefined as any, MAX_TREES),
-      deciduousTrunk: new THREE.InstancedMesh(this.treeDeciduousTrunkGeometry, undefined as any, MAX_TREES),
-      birch: new THREE.InstancedMesh(this.treeBirchGeometry, undefined as any, MAX_TREES),
-      birchTrunk: new THREE.InstancedMesh(this.treeBirchTrunkGeometry, undefined as any, MAX_TREES)
+      conifer: new THREE.InstancedMesh(this.treeConiferGeometry, this.treeManager.materials.conifer, MAX_TREES),
+      coniferTrunk: new THREE.InstancedMesh(this.treeConiferTrunkGeometry, this.treeManager.materials.coniferTrunk, MAX_TREES),
+      deciduous: new THREE.InstancedMesh(this.treeDeciduousGeometry, this.treeManager.materials.deciduous, MAX_TREES),
+      deciduousTrunk: new THREE.InstancedMesh(this.treeDeciduousTrunkGeometry, this.treeManager.materials.deciduousTrunk, MAX_TREES),
+      birch: new THREE.InstancedMesh(this.treeBirchGeometry, this.treeManager.materials.birch, MAX_TREES),
+      birchTrunk: new THREE.InstancedMesh(this.treeBirchTrunkGeometry, this.treeManager.materials.birchTrunk, MAX_TREES)
     }
     this.instancedTrees.conifer.castShadow = this.instancedTrees.conifer.receiveShadow = true
     this.instancedTrees.coniferTrunk.castShadow = this.instancedTrees.coniferTrunk.receiveShadow = true
@@ -555,12 +555,12 @@ export class SimulationEngine {
 
     // Instanced Trees Picking Meshes
     this.instancedTreesPicking = {
-      conifer: new THREE.InstancedMesh(this.treeConiferGeometry, undefined as any, MAX_TREES),
-      coniferTrunk: new THREE.InstancedMesh(this.treeConiferTrunkGeometry, undefined as any, MAX_TREES),
-      deciduous: new THREE.InstancedMesh(this.treeDeciduousGeometry, undefined as any, MAX_TREES),
-      deciduousTrunk: new THREE.InstancedMesh(this.treeDeciduousTrunkGeometry, undefined as any, MAX_TREES),
-      birch: new THREE.InstancedMesh(this.treeBirchGeometry, undefined as any, MAX_TREES),
-      birchTrunk: new THREE.InstancedMesh(this.treeBirchTrunkGeometry, undefined as any, MAX_TREES)
+      conifer: new THREE.InstancedMesh(this.treeConiferGeometry, this.treeManager.materials.picking, MAX_TREES),
+      coniferTrunk: new THREE.InstancedMesh(this.treeConiferTrunkGeometry, this.treeManager.materials.picking, MAX_TREES),
+      deciduous: new THREE.InstancedMesh(this.treeDeciduousGeometry, this.treeManager.materials.picking, MAX_TREES),
+      deciduousTrunk: new THREE.InstancedMesh(this.treeDeciduousTrunkGeometry, this.treeManager.materials.picking, MAX_TREES),
+      birch: new THREE.InstancedMesh(this.treeBirchGeometry, this.treeManager.materials.picking, MAX_TREES),
+      birchTrunk: new THREE.InstancedMesh(this.treeBirchTrunkGeometry, this.treeManager.materials.picking, MAX_TREES)
     }
     Object.values(this.instancedTreesPicking).forEach((mesh) => {
       mesh.material = this.treeManager.materials.picking
@@ -571,8 +571,8 @@ export class SimulationEngine {
 
     // Instanced Animals Meshes
     this.instancedAnimals = {
-      deer: new THREE.InstancedMesh(this.animalDeerGeometry, undefined as any, MAX_ANIMALS),
-      wolf: new THREE.InstancedMesh(this.animalWolfGeometry, undefined as any, MAX_ANIMALS)
+      deer: new THREE.InstancedMesh(this.animalDeerGeometry, this.animalManager.materials.deer, MAX_ANIMALS),
+      wolf: new THREE.InstancedMesh(this.animalWolfGeometry, this.animalManager.materials.wolf, MAX_ANIMALS)
     }
     this.instancedAnimals.deer.castShadow = this.instancedAnimals.deer.receiveShadow = true
     this.instancedAnimals.wolf.castShadow = this.instancedAnimals.wolf.receiveShadow = true
@@ -590,8 +590,8 @@ export class SimulationEngine {
 
     // Instanced Animals Picking Meshes
     this.instancedAnimalsPicking = {
-      deer: new THREE.InstancedMesh(this.animalDeerGeometry, undefined as any, MAX_ANIMALS),
-      wolf: new THREE.InstancedMesh(this.animalWolfGeometry, undefined as any, MAX_ANIMALS)
+      deer: new THREE.InstancedMesh(this.animalDeerGeometry, this.animalManager.materials.picking, MAX_ANIMALS),
+      wolf: new THREE.InstancedMesh(this.animalWolfGeometry, this.animalManager.materials.picking, MAX_ANIMALS)
     }
     Object.values(this.instancedAnimalsPicking).forEach((mesh) => {
       mesh.material = this.animalManager.materials.picking
@@ -733,34 +733,37 @@ export class SimulationEngine {
 
     const el = this.canvas
 
-    const onMouseMove = (e: MouseEvent) => {
+    const onMouseMove = (e: Event) => {
+      const mouseEvent = e as MouseEvent
       const rect = el.getBoundingClientRect()
-      this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-      this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
+      this.mouse.x = ((mouseEvent.clientX - rect.left) / rect.width) * 2 - 1
+      this.mouse.y = -((mouseEvent.clientY - rect.top) / rect.height) * 2 + 1
     }
 
     const onMouseLeave = () => {
       this.mouse.set(-999, -999)
     }
 
-    const onMouseDown = (e: MouseEvent) => {
+    const onMouseDown = (e: Event) => {
+      const mouseEvent = e as MouseEvent
       const state = useStore.getState()
       if (state.mode === 'PLAY') {
-        if (e.button === 0 && state.hoveredCell) {
+        if (mouseEvent.button === 0 && state.hoveredCell) {
           state.placeBuilding(state.hoveredCell.x, state.hoveredCell.z, state.selectedBuildingType)
         }
       } else if (state.mode === 'EDITOR') {
-        if (e.button === 0) this.isPainting = true
-        if (e.button === 2) this.isErasing = true
+        if (mouseEvent.button === 0) this.isPainting = true
+        if (mouseEvent.button === 2) this.isErasing = true
       }
     }
 
-    const onMouseUp = (e: MouseEvent) => {
-      if (e.button === 0) this.isPainting = false
-      if (e.button === 2) this.isErasing = false
+    const onMouseUp = (e: Event) => {
+      const mouseEvent = e as MouseEvent
+      if (mouseEvent.button === 0) this.isPainting = false
+      if (mouseEvent.button === 2) this.isErasing = false
     }
 
-    const onContextMenu = (e: MouseEvent) => {
+    const onContextMenu = (e: Event) => {
       const state = useStore.getState()
       if (state.mode === 'EDITOR') {
         e.preventDefault()

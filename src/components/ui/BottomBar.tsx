@@ -11,10 +11,10 @@ export const BottomBar = ({ onInitAI, onConsultAI }: BottomBarProps) => {
   const aiResponse = useStore((state) => state.aiResponse)
 
   return (
-    <footer className="absolute bottom-4 left-4 right-4 h-24 border border-white/10 bg-black/30 backdrop-blur-xl rounded-2xl flex items-center px-6 gap-6 z-20 shadow-2xl pointer-events-auto">
+    <footer className="absolute bottom-4 left-4 right-4 h-auto sm:h-24 border border-white/10 bg-black/30 backdrop-blur-xl rounded-2xl flex flex-col sm:flex-row items-center px-4 py-3 sm:py-0 sm:px-6 gap-3 sm:gap-6 z-20 shadow-2xl pointer-events-auto">
       {/* AI Status & Trigger */}
-      <div className="w-48 shrink-0 flex flex-col gap-3">
-        <div className="flex items-center gap-3">
+      <div className="w-full sm:w-48 shrink-0 flex flex-col gap-2 sm:gap-3">
+        <div className="flex items-center gap-3 justify-center sm:justify-start">
           <div className={`w-2 h-2 rounded-full ${isAiLoading ? 'bg-yellow-400 animate-pulse' : aiStatus.includes('Ready') ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.4)]' : 'bg-red-400'}`} />
           <span className="text-white/60 text-[10px] font-black uppercase tracking-widest">{aiStatus}</span>
         </div>
@@ -40,19 +40,19 @@ export const BottomBar = ({ onInitAI, onConsultAI }: BottomBarProps) => {
         )}
       </div>
 
-      <div className="h-12 w-[1px] bg-white/10" />
+      <div className="hidden sm:block h-12 w-[1px] bg-white/10" />
 
       {/* AI Narrative Content */}
-      <div className="flex-1 h-16 overflow-hidden relative group">
+      <div className="flex-1 w-full sm:w-auto h-20 sm:h-16 overflow-hidden relative group">
         {aiResponse ? (
           <div className="h-full overflow-y-auto pr-4 scrollbar-hide animate-in fade-in slide-in-from-bottom-2 duration-500">
             <p className="text-[9px] uppercase tracking-[0.2em] text-white/20 font-black mb-1">Advisor Logs</p>
-            <div className="text-sm text-white/90 leading-relaxed font-serif italic">
+            <div className="text-xs sm:text-sm text-white/90 leading-relaxed font-serif italic">
               "{aiResponse}"
             </div>
           </div>
         ) : (
-          <div className="h-full flex items-center text-white/10 italic text-sm">
+          <div className="h-full flex items-center justify-center sm:justify-start text-white/10 italic text-sm">
             Waiting for advisor input...
           </div>
         )}
@@ -61,10 +61,10 @@ export const BottomBar = ({ onInitAI, onConsultAI }: BottomBarProps) => {
         </div>
       </div>
 
-      <div className="h-12 w-[1px] bg-white/10" />
+      <div className="hidden lg:block h-12 w-[1px] bg-white/10" />
 
       {/* Developer Attribution */}
-      <div className="shrink-0 flex items-center gap-5 px-2">
+      <div className="hidden lg:flex shrink-0 items-center gap-5 px-2">
         <div className="flex flex-col items-end justify-center text-right">
           <div className="flex flex-col items-end">
             <span className="text-sm font-bold text-white tracking-wide">Dr. Georg Hackenberg</span>

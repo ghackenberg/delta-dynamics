@@ -16,6 +16,9 @@ export const LeftSidebar = () => {
   const editorBrushStrength = useStore((state) => state.editorBrushStrength)
   const setEditorBrushStrength = useStore((state) => state.setEditorBrushStrength)
 
+  const leftSidebarOpen = useStore((state) => state.leftSidebarOpen)
+  const setLeftSidebarOpen = useStore((state) => state.setLeftSidebarOpen)
+
   const buildings: { type: BuildingType, label: string, cost: string }[] = [
     { type: 'HOUSE', label: 'House', cost: '50W' },
     { type: 'FARM', label: 'Farm', cost: '30W' },
@@ -45,11 +48,22 @@ export const LeftSidebar = () => {
   ]
 
   return (
-    <aside className="absolute top-20 left-4 bottom-32 w-48 border border-white/10 bg-black/30 backdrop-blur-xl rounded-2xl flex flex-col z-10 overflow-hidden shadow-2xl pointer-events-auto">
+    <aside className={`fixed md:absolute top-20 left-0 md:left-4 bottom-32 w-48 border border-l-0 md:border-l border-white/10 bg-black/30 backdrop-blur-xl rounded-r-2xl md:rounded-2xl flex flex-col z-30 md:z-10 overflow-hidden shadow-2xl pointer-events-auto transition-transform duration-300 ease-in-out ${
+      leftSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    }`}>
       {mode === 'PLAY' ? (
         <>
-          <div className="p-4 border-b border-white/5">
+          <div className="p-4 border-b border-white/5 flex justify-between items-center">
             <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Construction</p>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setLeftSidebarOpen(false); }}
+              className="md:hidden text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 scrollbar-hide">
             {buildings.map((b) => (
@@ -89,8 +103,17 @@ export const LeftSidebar = () => {
         </>
       ) : (
         <>
-          <div className="p-4 border-b border-white/5">
+          <div className="p-4 border-b border-white/5 flex justify-between items-center">
             <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Paint Tools</p>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setLeftSidebarOpen(false); }}
+              className="md:hidden text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4 scrollbar-hide">
             <div className="space-y-2">
