@@ -17,6 +17,7 @@ export const RightSidebar = () => {
 
   const rightSidebarOpen = useStore((state) => state.rightSidebarOpen)
   const setRightSidebarOpen = useStore((state) => state.setRightSidebarOpen)
+  const lastOpenedSidebar = useStore((state) => state.lastOpenedSidebar)
 
   const hoveredEntity = useMemo(() => {
     if (!hoveredEntityId) return null
@@ -26,7 +27,9 @@ export const RightSidebar = () => {
   }, [hoveredEntityId, buildingsState, humans, animals])
 
   return (
-    <aside className={`fixed md:absolute top-20 right-0 md:right-4 bottom-32 w-80 border border-r-0 md:border-r border-white/10 bg-black/30 backdrop-blur-xl rounded-l-2xl md:rounded-2xl flex flex-col z-30 md:z-10 overflow-hidden shadow-2xl pointer-events-auto transition-transform duration-300 ease-in-out ${
+    <aside className={`fixed md:absolute top-20 right-0 md:right-4 bottom-32 w-80 border border-r-0 md:border-r border-white/10 bg-black/30 backdrop-blur-xl rounded-l-2xl md:rounded-2xl flex flex-col ${
+      lastOpenedSidebar === 'right' ? 'z-45' : 'z-40'
+    } md:z-10 overflow-hidden shadow-2xl pointer-events-auto transition-transform duration-300 ease-in-out ${
       rightSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
     }`}>
       <div className="p-4 border-b border-white/5 flex justify-between items-center">

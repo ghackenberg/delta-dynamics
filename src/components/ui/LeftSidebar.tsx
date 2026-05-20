@@ -20,6 +20,7 @@ export const LeftSidebar = () => {
 
   const leftSidebarOpen = useStore((state) => state.leftSidebarOpen)
   const setLeftSidebarOpen = useStore((state) => state.setLeftSidebarOpen)
+  const lastOpenedSidebar = useStore((state) => state.lastOpenedSidebar)
 
   const buildings: { type: BuildingType, label: string, cost: string }[] = [
     { type: 'HOUSE', label: 'House', cost: '50W' },
@@ -50,7 +51,9 @@ export const LeftSidebar = () => {
   ]
 
   return (
-    <aside className={`fixed md:absolute top-20 left-0 md:left-4 bottom-32 w-48 border border-l-0 md:border-l border-white/10 bg-black/30 backdrop-blur-xl rounded-r-2xl md:rounded-2xl flex flex-col z-30 md:z-10 overflow-hidden shadow-2xl pointer-events-auto transition-transform duration-300 ease-in-out ${
+    <aside className={`fixed md:absolute top-20 left-0 md:left-4 bottom-32 w-48 border border-l-0 md:border-l border-white/10 bg-black/30 backdrop-blur-xl rounded-r-2xl md:rounded-2xl flex flex-col ${
+      lastOpenedSidebar === 'left' ? 'z-45' : 'z-40'
+    } md:z-10 overflow-hidden shadow-2xl pointer-events-auto transition-transform duration-300 ease-in-out ${
       leftSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
     }`}>
       {mode === 'PLAY' ? (

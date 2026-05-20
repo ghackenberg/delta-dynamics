@@ -8,6 +8,7 @@ export interface UiSlice {
   fpsHistory: number[]
   leftSidebarOpen: boolean
   rightSidebarOpen: boolean
+  lastOpenedSidebar: 'left' | 'right' | null
   setIsLoading: (isLoading: boolean) => void
   setHoveredCell: (cell: { x: number, z: number } | null) => void
   setHoveredEntityId: (id: string | null) => void
@@ -24,6 +25,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   fpsHistory: [],
   leftSidebarOpen: false,
   rightSidebarOpen: false,
+  lastOpenedSidebar: null,
   setIsLoading: (isLoading) => set({ isLoading }),
   setHoveredCell: (cell) => set({ hoveredCell: cell }),
   setHoveredEntityId: (id) => set({ hoveredEntityId: id }),
@@ -31,6 +33,12 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
     fps, 
     fpsHistory: [...state.fpsHistory.slice(-29), fps] 
   })),
-  setLeftSidebarOpen: (open) => set({ leftSidebarOpen: open }),
-  setRightSidebarOpen: (open) => set({ rightSidebarOpen: open }),
+  setLeftSidebarOpen: (open) => set((state) => ({ 
+    leftSidebarOpen: open,
+    lastOpenedSidebar: open ? 'left' : state.lastOpenedSidebar === 'left' ? null : state.lastOpenedSidebar
+  })),
+  setRightSidebarOpen: (open) => set((state) => ({ 
+    rightSidebarOpen: open,
+    lastOpenedSidebar: open ? 'right' : state.lastOpenedSidebar === 'right' ? null : state.lastOpenedSidebar
+  })),
 })
