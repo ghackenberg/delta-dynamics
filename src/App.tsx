@@ -1,12 +1,10 @@
-import { Canvas } from '@react-three/fiber'
 import { Routes, Route, Navigate, useMatch, useNavigate, useLocation } from 'react-router-dom'
-import { Scene } from './components/scene/Scene'
+import { SimulationViewport } from './components/scene/SimulationViewport'
 import { HUD } from './components/ui/HUD'
 import { useAI } from './hooks/useAI'
 import { useGameLogic } from './hooks/useGameLogic'
 import { useStore } from './hooks/useStore'
 import { useEffect, useRef } from 'react'
-import * as THREE from 'three'
 
 function RouteSync() {
   const playMatch = useMatch('/play/:terrainId')
@@ -106,14 +104,7 @@ function App() {
 }
 
 function GameCanvas() {
-  return (
-    <Canvas
-      shadows={{ type: THREE.PCFShadowMap }}
-      camera={{ position: [20, 20, 20], fov: 45, near: 0.1, far: 1000 }}
-    >
-      <Scene />
-    </Canvas>
-  )
+  return <SimulationViewport />
 }
 
 export default App

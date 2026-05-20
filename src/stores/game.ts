@@ -37,6 +37,7 @@ import {
   deductBuildingCost 
 } from '../systems/economySystem'
 import { storageManager } from '../managers/StorageManager'
+import { previewManager } from '../managers/PreviewManager'
 import type { EditorSlice } from './editor'
 import type { AiSlice } from './ai'
 import type { UiSlice } from './ui'
@@ -75,7 +76,6 @@ export interface GameSlice {
   humans: Human[]
   animals: Animal[]
   rainIntensity: number
-  screenshotProvider: (() => Promise<string>) | null
   tick: () => void
   spawnHuman: (homeId: string) => void
   spawnAnimal: (type: AnimalType, x?: number, z?: number) => void
@@ -87,7 +87,6 @@ export interface GameSlice {
   setRainIntensity: (intensity: number) => void
   setTextures: (height: THREE.DataTexture, water: THREE.DataTexture) => void
   setGameTime: (time: number) => void
-  setScreenshotProvider: (provider: (() => Promise<string>) | null) => void
   saveActiveTerrain: () => Promise<void>
 }
 
@@ -116,7 +115,6 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
   waterTexture,
   humans: [],
   animals: [],
-  screenshotProvider: null,
 
   tick: () => {
     const state = get()
@@ -555,8 +553,6 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
 
   setGameTime: (time) => set({ gameTime: time }),
 
-  setScreenshotProvider: (provider) => set({ screenshotProvider: provider }),
-
   saveActiveTerrain: async () => {
     const state = get()
     if (!state.activeTerrainId || state.mode !== 'EDITOR') return
@@ -569,6 +565,8 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
       aCap: state.aCap,
       rLevel: state.rLevel,
       buildings: state.buildings,
+      humans: state.humans,
+      animals: state.animals,
       occupancyGrid: state.occupancyGrid,
     }
 
@@ -576,12 +574,12 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
     if (!existing) return
 
     let preview = existing.preview
-    if (state.screenshotProvider) {
-      try {
-        preview = await state.screenshotProvider()
-      } catch (err) {
-        console.error('Failed to capture preview:', err)
-      }
+    try {
+      // Clear the cache to ensure we get a fresh preview for the current state
+      previewManager.clearCache(state.activeTerrainId)
+      preview = await previewManager.getPreview(state.activeTerrainId, terrainData)
+    } catch (err) {
+      console.error('Failed to capture preview:', err)
     }
 
     const stored = {

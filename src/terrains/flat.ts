@@ -38,6 +38,6 @@ export const flatTerrain: TerrainConfig = {
         updateCellWaterData(i, j, vertices, tempState)
       }
     }
-    return { vertices, sWater, gWater, tHeight, aCap, rLevel, buildings, occupancyGrid }
+    return { vertices, sWater, gWater, tHeight, aCap, rLevel, buildings, humans: [], animals: [], occupancyGrid }
   }
 }

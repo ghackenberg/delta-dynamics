@@ -60,6 +60,8 @@ export interface TerrainData {
   aCap: Float32Array
   rLevel: Float32Array
   buildings: BuildingInstance[]
+  humans: Human[]
+  animals: Animal[]
   occupancyGrid: (string | null)[][]
 }
 

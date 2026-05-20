@@ -10,6 +10,11 @@ export const basicTerrain: TerrainConfig = {
   category: 'STANDARD',
   visualRange: [-5, 5],
   generate: () => {
+    let seed = 42
+    const random = () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296
+      return seed / 4294967296
+    }
     const vertices: TerrainVertex[][] = []
     for (let i = 0; i <= GRID_SIZE; i++) {
       const row: TerrainVertex[] = []
@@ -62,7 +67,7 @@ export const basicTerrain: TerrainConfig = {
         }
 
         const idx = j * GRID_SIZE + i
-        if (isHumusCell && getCellMaxSlope(vertices, i, j) <= TREE_SLOPE_THRESHOLD && sWater[idx] <= 0 && Math.random() > 0.98) {
+        if (isHumusCell && getCellMaxSlope(vertices, i, j) <= TREE_SLOPE_THRESHOLD && sWater[idx] <= 0 && random() > 0.98) {
           const treeSpacing = 3
           let tooClose = false
           const sXi = Math.max(0, i - treeSpacing), eXi = Math.min(GRID_SIZE - 1, i + treeSpacing)
@@ -79,8 +84,12 @@ export const basicTerrain: TerrainConfig = {
 
           if (!tooClose) {
             const treeTypes: BuildingType[] = ['TREE_CONIFER', 'TREE_DECIDUOUS', 'TREE_BIRCH']
-            const randomTree = treeTypes[Math.floor(Math.random() * treeTypes.length)]
-            const id = Math.random().toString(36).substr(2, 9)
+            const randomTree = treeTypes[Math.floor(random() * treeTypes.length)]
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+            let id = ''
+            for (let k = 0; k < 9; k++) {
+              id += chars.charAt(Math.floor(random() * chars.length))
+            }
             
             buildings.push({ 
               id, 
@@ -100,7 +109,7 @@ export const basicTerrain: TerrainConfig = {
         }
       }
     }
-    return { vertices, sWater, gWater, tHeight, aCap, rLevel, buildings, occupancyGrid }
+    return { vertices, sWater, gWater, tHeight, aCap, rLevel, buildings, humans: [], animals: [], occupancyGrid }
   }
 }
 

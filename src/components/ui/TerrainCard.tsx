@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import type { TerrainConfig } from '../../types/game'
 import { DuplicateIcon, RenameIcon, EditIcon, TrashIcon } from './Icons'
+import { previewManager } from '../../managers/PreviewManager'
 
 interface TerrainCardProps {
   terrain: TerrainConfig
@@ -13,6 +15,26 @@ interface TerrainCardProps {
 export const TerrainCard = ({ terrain, onDuplicate, onRename, onEdit, onDelete }: TerrainCardProps) => {
   const navigate = useNavigate()
   const isStandard = terrain.category === 'STANDARD'
+  const [generatedPreview, setGeneratedPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!terrain.preview && !generatedPreview) {
+      const fetchPreview = async () => {
+        try {
+          // For standard terrains, the worker can generate the data from the ID.
+          // For custom terrains, we need to generate it here and pass it.
+          const terrainData = !isStandard ? terrain.generate() : undefined
+          const previewUrl = await previewManager.getPreview(terrain.id, terrainData)
+          setGeneratedPreview(previewUrl)
+        } catch (err) {
+          console.error(`Failed to generate preview for ${terrain.id}:`, err)
+        }
+      }
+      fetchPreview()
+    }
+  }, [terrain, generatedPreview, isStandard])
+
+  const previewSrc = terrain.preview || generatedPreview
 
   return (
     <div className="relative group">
@@ -26,15 +48,18 @@ export const TerrainCard = ({ terrain, onDuplicate, onRename, onEdit, onDelete }
       >
         {/* Terrain Preview Header */}
         <div className="w-full aspect-video relative overflow-hidden bg-black/40 border-b border-white/10">
-          {terrain.preview ? (
+          {previewSrc ? (
             <img 
-              src={terrain.preview} 
+              src={previewSrc} 
               alt={terrain.name} 
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-100" 
+              style={{ imageRendering: 'pixelated' }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/5 to-white/10">
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">No Preview</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
+                {terrain.preview === undefined && !generatedPreview ? 'Generating...' : 'No Preview'}
+              </span>
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
