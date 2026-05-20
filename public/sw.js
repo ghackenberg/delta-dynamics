@@ -3,6 +3,8 @@ const ASSETS_TO_CACHE = [
   '/delta-dynamics/',
   '/delta-dynamics/index.html',
   '/delta-dynamics/icon.svg',
+  '/delta-dynamics/icon-192.png',
+  '/delta-dynamics/icon-512.png',
   '/delta-dynamics/manifest.webmanifest'
 ];
 
