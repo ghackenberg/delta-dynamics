@@ -74,7 +74,12 @@ export const terrainSurfaceFragmentModule: ShaderModule = {
             float dist = distance(currentCell, uHoveredCell);
 
             if (uMode == 1 && uHoveredCell.x >= 0.0) { // EDITOR mode
-                if (dist <= uBrushSize) {
+                if (uBrushSize < 0.1) {
+                    if (dist < 0.5) {
+                        float highlightIntensity = 0.3 + 0.5 * uBrushStrength;
+                        terrainColor = mix(terrainColor, uLayerHighlightColors[typeIdx], highlightIntensity);
+                    }
+                } else if (dist <= uBrushSize) {
                     float sigma = uBrushSize / 2.0;
                     float sigma2 = 2.0 * sigma * sigma;
                     float weight = exp(-(dist * dist) / sigma2);
@@ -96,16 +101,17 @@ export const terrainSurfaceFragmentModule: ShaderModule = {
             if (isGridLineX || isGridLineY) {
                 bool isBrushBorder = false;
                 if (uMode == 1 && uHoveredCell.x >= 0.0) {
+                    float effBrushSize = uBrushSize < 0.1 ? 0.5 : uBrushSize;
                     float distCurrent = distance(currentCell, uHoveredCell);
-                    bool currentIn = distCurrent <= uBrushSize;
+                    bool currentIn = distCurrent <= effBrushSize;
                     if (isGridLineX) {
                         vec2 neighborX = currentCell + vec2(grid.x < 0.5 ? -1.0 : 1.0, 0.0);
-                        bool neighborIn = distance(neighborX, uHoveredCell) <= uBrushSize;
+                        bool neighborIn = distance(neighborX, uHoveredCell) <= effBrushSize;
                         if (currentIn != neighborIn) isBrushBorder = true;
                     }
                     if (!isBrushBorder && isGridLineY) {
                         vec2 neighborY = currentCell + vec2(0.0, grid.y < 0.5 ? 1.0 : -1.0);
-                        bool neighborIn = distance(neighborY, uHoveredCell) <= uBrushSize;
+                        bool neighborIn = distance(neighborY, uHoveredCell) <= effBrushSize;
                         if (currentIn != neighborIn) isBrushBorder = true;
                     }
                 }

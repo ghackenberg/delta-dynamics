@@ -120,7 +120,7 @@ export const LeftSidebar = () => {
                 <span className="text-[10px] text-white/60 font-mono">{editorBrushSize}</span>
               </div>
               <input 
-                type="range" min="1" max="15" step="1"
+                type="range" min="0" max="15" step="1"
                 value={editorBrushSize}
                 onChange={(e) => setEditorBrushSize(parseInt(e.target.value))}
                 className="w-full accent-orange-500"

@@ -834,7 +834,8 @@ export class SimulationEngine {
     // Update shaders uniforms for cell hovering and editor brush highlighting
     this.uniforms.uMode.value = mode === 'EDITOR' ? 1 : 0
     this.uniforms.uBrushSize.value = editorBrushSize
-    this.uniforms.uBrushStrength.value = editorBrushStrength
+    const isWaterOrRain = ['RAIN', 'WATER_SOURCE', 'WATER_SINK'].includes(editorLayerType)
+    this.uniforms.uBrushStrength.value = isWaterOrRain ? editorBrushStrength : editorBrushStrength * 0.1
     if (hoveredCell) {
       this.uniforms.uHoveredCell.value.set(hoveredCell.x, hoveredCell.z)
     } else {

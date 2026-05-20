@@ -194,6 +194,70 @@ export const paintArea = (
 ): boolean => {
   if (type === 'RAIN') return false
 
+  if (radius === 0) {
+    if (type === 'WATER_SOURCE' || type === 'WATER_SINK') {
+      if (!state.rLevel) return false
+      const idx = zIdx * GRID_SIZE + xIdx
+      const amount = strength
+      if (strength > 0) {
+        const delta = type === 'WATER_SOURCE' ? amount : -amount
+        state.rLevel[idx] = Math.max(-5.0, Math.min(5.0, state.rLevel[idx] + delta))
+      } else {
+        const current = state.rLevel[idx]
+        if (Math.abs(current) > 0.001) {
+          const eraseFactor = Math.abs(strength)
+          if (current > 0) state.rLevel[idx] = Math.max(0, current - eraseFactor)
+          else state.rLevel[idx] = Math.min(0, current + eraseFactor)
+        }
+      }
+      return true
+    }
+
+    let changed = false
+    const amount = strength
+    for (let di = 0; di <= 1; di++) {
+      for (let dj = 0; dj <= 1; dj++) {
+        const i = xIdx + di
+        const j = zIdx + dj
+        if (i < 0 || i > GRID_SIZE || j < 0 || j > GRID_SIZE) continue
+
+        const vertex = vertices[i][j]
+        const last = vertex[vertex.length - 1]
+
+        if (strength > 0) {
+          if (last?.type === type) {
+            last.thickness += amount
+          } else {
+            vertex.push({ type, thickness: amount })
+          }
+          changed = true
+        } else {
+          let eraseAmount = Math.abs(amount)
+          while (eraseAmount > 0 && vertex.length > 0) {
+            const currentLast = vertex[vertex.length - 1]
+            if (currentLast.thickness > eraseAmount) {
+              currentLast.thickness -= eraseAmount
+              eraseAmount = 0
+            } else {
+              eraseAmount -= currentLast.thickness
+              if (vertex.length > 1) {
+                vertex.pop()
+              } else {
+                currentLast.thickness = 0
+                eraseAmount = 0
+              }
+            }
+          }
+          changed = true
+        }
+      }
+    }
+    if (changed) {
+      updateWaterSimulationForArea(vertices, xIdx, zIdx, 1, 1, state)
+    }
+    return changed
+  }
+
   if (type === 'WATER_SOURCE' || type === 'WATER_SINK') {
     if (!state.rLevel) return false
     let changed = false

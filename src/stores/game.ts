@@ -351,12 +351,17 @@ export const createGameSlice: StateCreator<StoreState, [], [], GameSlice> = (set
       }
     }
 
+    const rawStrength = isErase ? -state.editorBrushStrength : state.editorBrushStrength
+    const appliedStrength = ['RAIN', 'WATER_SOURCE', 'WATER_SINK'].includes(state.editorLayerType)
+      ? rawStrength
+      : rawStrength * 0.1
+
     const changed = paintArea(
       state.terrainVertices,
       xIndex, zIndex,
       radius,
       state.editorLayerType,
-      isErase ? -state.editorBrushStrength : state.editorBrushStrength,
+      appliedStrength,
       state
     )
 
