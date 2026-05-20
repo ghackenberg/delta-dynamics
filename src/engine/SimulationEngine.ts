@@ -1153,13 +1153,13 @@ export class SimulationEngine {
       const isSpacePressed = !!this.keysPressed[' ']
       
       if (interactionMode === 'CAMERA') {
-        // Camera mode: left mouse pans/moves, middle pans, right rotates, one touch pans/moves, two touch dolly-pan
-        if (this.controls.mouseButtons.LEFT !== THREE.MOUSE.PAN || this.controls.touches.ONE !== THREE.TOUCH.PAN) {
+        // Camera mode: left mouse pans/moves, middle pans, right rotates, one touch pans/moves, two touch dolly-rotate
+        if (this.controls.mouseButtons.LEFT !== THREE.MOUSE.PAN || this.controls.touches.ONE !== THREE.TOUCH.PAN || this.controls.touches.TWO !== THREE.TOUCH.DOLLY_ROTATE) {
           this.controls.mouseButtons.LEFT = THREE.MOUSE.PAN
           this.controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN
           this.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE
           this.controls.touches.ONE = THREE.TOUCH.PAN
-          this.controls.touches.TWO = THREE.TOUCH.DOLLY_PAN
+          this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE
         }
       } else {
         // Paint mode: left mouse does actions (or pans if Space is held), middle pans, right rotates, one touch does actions, two touch dolly-pan

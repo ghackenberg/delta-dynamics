@@ -195,8 +195,12 @@ export const LeftSidebar = () => {
               <p className="text-[10px] text-white/40 leading-relaxed font-medium">
                 <span className="text-white/60 font-bold block mb-1.5 uppercase tracking-wider text-[9.5px]">Controls</span>
                 <span className="text-white/60 block font-bold text-[8.5px] uppercase tracking-wider mt-1">Touch:</span>
-                • 1 finger: Sculpt / Paint / Build / Inspect<br/>
-                • 2 fingers: Zoom / Pan / Rotate camera<br/>
+                • Camera Mode:<br/>
+                &nbsp;&nbsp;- 1 finger: Pan / Inspect<br/>
+                &nbsp;&nbsp;- 2 fingers: Zoom & Rotate<br/>
+                • Paint/Build Mode:<br/>
+                &nbsp;&nbsp;- 1 finger: Sculpt / Paint / Build / Inspect<br/>
+                &nbsp;&nbsp;- 2 fingers: Zoom & Pan<br/>
                 <span className="text-white/60 block font-bold text-[8.5px] uppercase tracking-wider mt-2">Mouse/Keyboard:</span>
                 • Left-click/drag: Sculpt / Paint / Build / Inspect<br/>
                 • WASD / Arrow Keys: Pan camera<br/>
