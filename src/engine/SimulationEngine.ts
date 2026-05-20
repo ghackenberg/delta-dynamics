@@ -206,7 +206,7 @@ export class SimulationEngine {
     }
     this.renderer = new THREE.WebGLRenderer(rendererParams)
     this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFShadowMap
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
 
     // 3. Initialize Controls (if interactive)
     if (this.interactive && this.canvas instanceof HTMLCanvasElement) {
@@ -265,17 +265,18 @@ export class SimulationEngine {
     this.directionalLight.name = 'main-dir-light'
     this.directionalLight.position.set(20, 40, 20)
     this.directionalLight.castShadow = true
-    this.directionalLight.shadow.mapSize.set(2048, 2048)
-    this.directionalLight.shadow.bias = -0.0005
+    this.directionalLight.shadow.mapSize.set(4096, 4096)
+    this.directionalLight.shadow.bias = -0.0002
+    this.directionalLight.shadow.normalBias = 0.02
 
-    // Configure shadow camera bounds
-    const d = 15
+    // Configure shadow camera bounds to fit the 20x20 terrain (d = 12 covers from -10 to 10 with a buffer)
+    const d = 12
     this.directionalLight.shadow.camera.left = -d
     this.directionalLight.shadow.camera.right = d
     this.directionalLight.shadow.camera.top = d
     this.directionalLight.shadow.camera.bottom = -d
     this.directionalLight.shadow.camera.near = 0.1
-    this.directionalLight.shadow.camera.far = 50
+    this.directionalLight.shadow.camera.far = 60
     this.scene.add(this.directionalLight)
   }
 
