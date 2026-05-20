@@ -15,6 +15,8 @@ export const LeftSidebar = () => {
   const setEditorBrushSize = useStore((state) => state.setEditorBrushSize)
   const editorBrushStrength = useStore((state) => state.editorBrushStrength)
   const setEditorBrushStrength = useStore((state) => state.setEditorBrushStrength)
+  const editorBrushAction = useStore((state) => state.editorBrushAction)
+  const setEditorBrushAction = useStore((state) => state.setEditorBrushAction)
 
   const leftSidebarOpen = useStore((state) => state.leftSidebarOpen)
   const setLeftSidebarOpen = useStore((state) => state.setLeftSidebarOpen)
@@ -66,12 +68,39 @@ export const LeftSidebar = () => {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 scrollbar-hide">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedBuildingType('NONE');
+              }}
+              className={`flex flex-col items-start p-3 rounded-xl border transition-all shadow-sm group ${
+                selectedBuildingType === 'NONE'
+                ? 'bg-white text-black border-white'
+                : 'bg-white/5 text-white/80 border-white/5 hover:bg-white/10 hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span className="text-xs font-bold">Inspect / Camera</span>
+              </div>
+              <span className={`text-[9px] mt-0.5 font-medium ${selectedBuildingType === 'NONE' ? 'text-black/60' : 'text-white/30'}`}>
+                Move camera & inspect details
+              </span>
+            </button>
+
             {buildings.map((b) => (
               <button
                 key={b.type}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedBuildingType(b.type);
+                  if (selectedBuildingType === b.type) {
+                    setSelectedBuildingType('NONE');
+                  } else {
+                    setSelectedBuildingType(b.type);
+                  }
                 }}
                 className={`flex flex-col items-start p-3 rounded-xl border transition-all shadow-sm group ${
                   selectedBuildingType === b.type 
@@ -117,16 +146,17 @@ export const LeftSidebar = () => {
           </div>
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4 scrollbar-hide">
             <div className="space-y-2">
-              <p className="text-white/30 text-[9px] uppercase tracking-widest font-black px-1">Layers</p>
+              <p className="text-white/30 text-[9px] uppercase tracking-widest font-black px-1">Layers & Tools</p>
               {layerTypes.map((l) => (
                 <button
                   key={l.type}
                   onClick={(e) => {
                     e.stopPropagation();
                     setEditorLayerType(l.type);
+                    setEditorBrushAction('PAINT');
                   }}
                   className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all ${
-                    editorLayerType === l.type 
+                    editorBrushAction === 'PAINT' && editorLayerType === l.type 
                     ? 'bg-orange-500 text-white border-orange-400 shadow-lg' 
                     : 'bg-white/5 text-white/60 border-white/5 hover:bg-white/10'
                   }`}
@@ -135,6 +165,25 @@ export const LeftSidebar = () => {
                   <span className="text-[11px] font-bold">{l.label}</span>
                 </button>
               ))}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditorBrushAction('ERASE');
+                }}
+                className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all ${
+                  editorBrushAction === 'ERASE' 
+                  ? 'bg-red-500 text-white border-red-400 shadow-lg' 
+                  : 'bg-white/5 text-white/60 border-white/5 hover:bg-white/10'
+                }`}
+              >
+                <div className="w-3 h-3 flex items-center justify-center text-red-400">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M20 20H4"/>
+                    <path d="M20 7.6L13.4 1c-.8-.8-2-.8-2.8 0L1.6 10c-.8.8-.8 2 0 2.8L7.6 20h10c.8 0 1.5-.5 1.8-1.2l3-6.2c.4-.8.4-1.8 0-2.6L20 7.6z"/>
+                  </svg>
+                </div>
+                <span className="text-[11px] font-bold">Erase Tool</span>
+              </button>
             </div>
 
             <div className="space-y-3 px-1 mt-2">
@@ -161,12 +210,19 @@ export const LeftSidebar = () => {
               />
             </div>
 
-            <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/5">
+            <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/5 animate-in fade-in duration-300">
               <p className="text-[10px] text-white/40 leading-relaxed font-medium">
-                <span className="text-white/60 font-bold block mb-1 uppercase tracking-wider text-[9px]">Controls</span>
-                Hold <span className="text-orange-400 font-black">CTRL</span> to sculpt:<br/>
-                <span className="text-orange-400">Left Click</span> to paint<br/>
-                <span className="text-orange-400">Right Click</span> to erase
+                <span className="text-white/60 font-bold block mb-1.5 uppercase tracking-wider text-[9.5px]">Controls</span>
+                <span className="text-white/60 block font-bold text-[8.5px] uppercase tracking-wider mt-1">Touch:</span>
+                • 1 finger: Sculpt / Paint / Build / Inspect<br/>
+                • 2 fingers: Zoom / Pan / Rotate camera<br/>
+                <span className="text-white/60 block font-bold text-[8.5px] uppercase tracking-wider mt-2">Mouse/Keyboard:</span>
+                • Left-click/drag: Sculpt / Paint / Build / Inspect<br/>
+                • WASD / Arrow Keys: Pan camera<br/>
+                • Space + Left-drag: Pan camera<br/>
+                • Right-click/drag: Rotate camera<br/>
+                • Middle-click/drag: Pan camera<br/>
+                • Scroll wheel: Zoom (Smart focus under mouse)
               </p>
             </div>
 

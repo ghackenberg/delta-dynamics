@@ -74,6 +74,8 @@ export class SimulationEngine {
   public renderer: THREE.WebGLRenderer
   public controls: MapControls | null = null
   private startTime: number
+  private lastUpdateTime: number
+  private keysPressed: Record<string, boolean> = {}
 
   // Lights
   public ambientLight!: THREE.AmbientLight
@@ -190,6 +192,7 @@ export class SimulationEngine {
     this.canvas = canvas
     this.interactive = options.interactive ?? true
     this.startTime = performance.now()
+    this.lastUpdateTime = performance.now()
 
     // 1. Initialize Scene & Camera
     this.scene = new THREE.Scene()
@@ -249,6 +252,7 @@ export class SimulationEngine {
         type: THREE.UnsignedByteType
       })
       this.setupMouseListeners()
+      this.setupTouchListeners()
     }
   }
 
@@ -742,25 +746,58 @@ export class SimulationEngine {
 
     const onMouseLeave = () => {
       this.mouse.set(-999, -999)
+      const state = useStore.getState()
+      state.setHoveredCell(null)
+      state.setHoveredEntityId(null)
     }
 
     const onMouseDown = (e: Event) => {
       const mouseEvent = e as MouseEvent
+      const rect = el.getBoundingClientRect()
+      this.mouse.x = ((mouseEvent.clientX - rect.left) / rect.width) * 2 - 1
+      this.mouse.y = -((mouseEvent.clientY - rect.top) / rect.height) * 2 + 1
+
+      // Sync picking immediately on down
+      this.performPicking()
+
       const state = useStore.getState()
-      if (state.mode === 'PLAY') {
+      const isPaintMode = state.mode === 'EDITOR' && state.editorInteractionMode === 'PAINT'
+      const isBuildMode = state.mode === 'PLAY' && state.editorInteractionMode === 'PAINT' && state.selectedBuildingType !== 'NONE'
+
+      if (isBuildMode) {
         if (mouseEvent.button === 0 && state.hoveredCell) {
           state.placeBuilding(state.hoveredCell.x, state.hoveredCell.z, state.selectedBuildingType)
         }
-      } else if (state.mode === 'EDITOR') {
-        if (mouseEvent.button === 0) this.isPainting = true
-        if (mouseEvent.button === 2) this.isErasing = true
+      } else if (state.mode === 'PLAY' && state.selectedBuildingType === 'NONE') {
+        // Inspecting is allowed in both camera and paint mode when not placing a building
+        if (mouseEvent.button === 0) {
+          const freshState = useStore.getState()
+          if (freshState.hoveredEntityId || freshState.hoveredCell) {
+            freshState.setRightSidebarOpen(true)
+          }
+        }
+      } else if (isPaintMode) {
+        if (mouseEvent.button === 0) {
+          const isSpacePressed = !!this.keysPressed[' ']
+          if (!isSpacePressed) {
+            if (state.editorBrushAction === 'ERASE') {
+              this.isErasing = true
+              this.isPainting = false
+            } else {
+              this.isPainting = true
+              this.isErasing = false
+            }
+          }
+        }
       }
     }
 
     const onMouseUp = (e: Event) => {
       const mouseEvent = e as MouseEvent
-      if (mouseEvent.button === 0) this.isPainting = false
-      if (mouseEvent.button === 2) this.isErasing = false
+      if (mouseEvent.button === 0) {
+        this.isPainting = false
+        this.isErasing = false
+      }
     }
 
     const onContextMenu = (e: Event) => {
@@ -770,21 +807,282 @@ export class SimulationEngine {
       }
     }
 
+    const onKeyDown = (e: Event) => {
+      const keyEvent = e as KeyboardEvent
+      this.keysPressed[keyEvent.key.toLowerCase()] = true
+      if (keyEvent.key === ' ' || keyEvent.code === 'Space') {
+        if (e.cancelable) {
+          e.preventDefault()
+        }
+      }
+    }
+
+    const onKeyUp = (e: Event) => {
+      const keyEvent = e as KeyboardEvent
+      this.keysPressed[keyEvent.key.toLowerCase()] = false
+    }
+
     el.addEventListener('mousemove', onMouseMove)
     el.addEventListener('mouseleave', onMouseLeave)
     el.addEventListener('mousedown', onMouseDown)
     el.addEventListener('mouseup', onMouseUp)
     el.addEventListener('contextmenu', onContextMenu)
 
+    window.addEventListener('keydown', onKeyDown, { passive: false })
+    window.addEventListener('keyup', onKeyUp)
+
     this.listeners.push({ element: el, type: 'mousemove', handler: onMouseMove })
     this.listeners.push({ element: el, type: 'mouseleave', handler: onMouseLeave })
     this.listeners.push({ element: el, type: 'mousedown', handler: onMouseDown })
     this.listeners.push({ element: el, type: 'mouseup', handler: onMouseUp })
     this.listeners.push({ element: el, type: 'contextmenu', handler: onContextMenu })
+    this.listeners.push({ element: window, type: 'keydown', handler: onKeyDown })
+    this.listeners.push({ element: window, type: 'keyup', handler: onKeyUp })
 
     // Also listen to window level mouseup to end painting/erasing when dragging off canvas
     window.addEventListener('mouseup', onMouseUp)
     this.listeners.push({ element: window, type: 'mouseup', handler: onMouseUp })
+  }
+
+  private performPicking() {
+    if (!this.interactive || this.mouse.x === -999 || this.mouse.y === -999) return
+
+    const state = useStore.getState()
+    const { mode, buildings, humans, animals } = state
+
+    const width = this.renderer.domElement.clientWidth
+    const height = this.renderer.domElement.clientHeight
+    const pixelX = (this.mouse.x * 0.5 + 0.5) * width
+    const pixelY = (this.mouse.y * 0.5 + 0.5) * height
+
+    const isEditor = mode === 'EDITOR'
+    if (this.instancedTreesPicking) {
+      Object.values(this.instancedTreesPicking).forEach(mesh => {
+        mesh.visible = !isEditor
+      })
+    }
+    if (this.instancedAnimalsPicking) {
+      Object.values(this.instancedAnimalsPicking).forEach(mesh => {
+        mesh.visible = !isEditor
+      })
+    }
+    this.humanMeshes.forEach(group => {
+      const pickMesh = group.getObjectByName('pickingMesh')
+      if (pickMesh) {
+        pickMesh.visible = !isEditor
+      }
+    })
+
+    const originalMask = this.camera.layers.mask
+    this.camera.setViewOffset(width, height, pixelX, height - pixelY, 1, 1)
+    this.camera.layers.set(PICKING_LAYER)
+
+    const currentRenderTarget = this.renderer.getRenderTarget()
+    const originalClearColor = this.renderer.getClearColor(new THREE.Color())
+    const originalClearAlpha = this.renderer.getClearAlpha()
+
+    this.renderer.setRenderTarget(this.pickingTarget)
+    this.renderer.setClearColor(0x000000, 0)
+    this.renderer.clear()
+    this.renderer.render(this.scene, this.camera)
+
+    this.renderer.setRenderTarget(currentRenderTarget)
+    this.renderer.setClearColor(originalClearColor, originalClearAlpha)
+
+    this.camera.clearViewOffset()
+    this.camera.layers.mask = originalMask
+
+    if (isEditor) {
+      if (this.instancedTreesPicking) {
+        Object.values(this.instancedTreesPicking).forEach(mesh => {
+          mesh.visible = true
+        })
+      }
+      if (this.instancedAnimalsPicking) {
+        Object.values(this.instancedAnimalsPicking).forEach(mesh => {
+          mesh.visible = true
+        })
+      }
+      this.humanMeshes.forEach(group => {
+        const pickMesh = group.getObjectByName('pickingMesh')
+        if (pickMesh) {
+          pickMesh.visible = true
+        }
+      })
+    }
+
+    this.renderer.readRenderTargetPixels(this.pickingTarget, 0, 0, 1, 1, this.pickingPixelBuffer)
+
+    const r = this.pickingPixelBuffer[0]
+    const g = this.pickingPixelBuffer[1]
+    const b = this.pickingPixelBuffer[2]
+
+    if (b === 0) {
+      if (r > 0 && g > 0) {
+        state.setHoveredCell({ x: r - 1, z: g - 1 })
+        state.setHoveredEntityId(null)
+      } else {
+        state.setHoveredCell(null)
+        state.setHoveredEntityId(null)
+      }
+    } else {
+      state.setHoveredCell(null)
+      const rawPickingId = (r << 8) | g
+      const pickingId = rawPickingId - 1
+      let foundId: string | null = null
+
+      if (b === 255) {
+        const building = buildings.find((x) => x.pickingId === pickingId || x.pickingId === rawPickingId)
+        foundId = building ? building.id : null
+      } else if (b === 254) {
+        const human = humans.find((h) => h.pickingId === pickingId || h.pickingId === rawPickingId)
+        foundId = human ? human.id : null
+      } else if (b === 253) {
+        const animal = animals.find((a) => a.pickingId === pickingId || a.pickingId === rawPickingId)
+        foundId = animal ? animal.id : null
+      }
+
+      state.setHoveredEntityId(foundId)
+    }
+  }
+
+  private setupTouchListeners() {
+    if (!(this.canvas instanceof HTMLCanvasElement)) return
+
+    const el = this.canvas
+    let touchStartX = 0
+    let touchStartY = 0
+    let isDrag = false
+
+    const onTouchStart = (e: Event) => {
+      const touchEvent = e as TouchEvent
+      const state = useStore.getState()
+      
+      const isPaintMode = state.mode === 'EDITOR' && state.editorInteractionMode === 'PAINT'
+      const isBuildMode = state.mode === 'PLAY' && state.editorInteractionMode === 'PAINT' && state.selectedBuildingType !== 'NONE'
+ 
+      if (touchEvent.touches.length === 1) {
+        const touch = touchEvent.touches[0]
+        const rect = el.getBoundingClientRect()
+        this.mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1
+        this.mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1
+        
+        touchStartX = touch.clientX
+        touchStartY = touch.clientY
+        isDrag = false
+ 
+        this.performPicking()
+ 
+        if (isPaintMode) {
+          if (touchEvent.cancelable) {
+            touchEvent.preventDefault()
+          }
+          if (state.editorBrushAction === 'ERASE') {
+            this.isErasing = true
+            this.isPainting = false
+          } else {
+            this.isPainting = true
+            this.isErasing = false
+          }
+        } else if (isBuildMode) {
+          if (touchEvent.cancelable) {
+            touchEvent.preventDefault()
+          }
+        }
+      } else {
+        this.isPainting = false
+        this.isErasing = false
+      }
+    }
+ 
+    const onTouchMove = (e: Event) => {
+      const touchEvent = e as TouchEvent
+      const state = useStore.getState()
+      
+      const isPaintMode = state.mode === 'EDITOR' && state.editorInteractionMode === 'PAINT'
+      const isBuildMode = state.mode === 'PLAY' && state.editorInteractionMode === 'PAINT' && state.selectedBuildingType !== 'NONE'
+ 
+      if (isPaintMode || isBuildMode) {
+        if (touchEvent.cancelable) {
+          touchEvent.preventDefault()
+        }
+      }
+ 
+      if (touchEvent.touches.length === 1) {
+        const touch = touchEvent.touches[0]
+        const rect = el.getBoundingClientRect()
+        this.mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1
+        this.mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1
+ 
+        const dx = touch.clientX - touchStartX
+        const dy = touch.clientY - touchStartY
+        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+          isDrag = true
+        }
+ 
+        this.performPicking()
+      } else {
+        this.isPainting = false
+        this.isErasing = false
+      }
+    }
+ 
+    const onTouchEnd = (e: Event) => {
+      const touchEvent = e as TouchEvent
+      const state = useStore.getState()
+      
+      const isPaintMode = state.mode === 'EDITOR' && state.editorInteractionMode === 'PAINT'
+      const isBuildMode = state.mode === 'PLAY' && state.editorInteractionMode === 'PAINT' && state.selectedBuildingType !== 'NONE'
+ 
+      if (isPaintMode || isBuildMode) {
+        if (touchEvent.cancelable) {
+          touchEvent.preventDefault()
+        }
+      }
+ 
+      this.isPainting = false
+      this.isErasing = false
+ 
+      if (!isDrag && touchEvent.touches.length === 0) {
+        if (state.mode === 'PLAY') {
+          if (state.selectedBuildingType !== 'NONE') {
+            if (state.hoveredCell && state.editorInteractionMode === 'PAINT') {
+              state.placeBuilding(state.hoveredCell.x, state.hoveredCell.z, state.selectedBuildingType)
+            }
+          } else {
+            this.performPicking()
+            const freshState = useStore.getState()
+            if (freshState.hoveredEntityId || freshState.hoveredCell) {
+              freshState.setRightSidebarOpen(true)
+            }
+          }
+        }
+      }
+ 
+      this.mouse.set(-999, -999)
+      const freshState = useStore.getState()
+      freshState.setHoveredCell(null)
+      freshState.setHoveredEntityId(null)
+    }
+
+    const onTouchCancel = () => {
+      this.isPainting = false
+      this.isErasing = false
+      this.mouse.set(-999, -999)
+      const state = useStore.getState()
+      state.setHoveredCell(null)
+      state.setHoveredEntityId(null)
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: false })
+    el.addEventListener('touchcancel', onTouchCancel, { passive: false })
+
+    this.listeners.push({ element: el, type: 'touchstart', handler: onTouchStart })
+    this.listeners.push({ element: el, type: 'touchmove', handler: onTouchMove })
+    this.listeners.push({ element: el, type: 'touchend', handler: onTouchEnd })
+    this.listeners.push({ element: el, type: 'touchcancel', handler: onTouchCancel })
   }
 
   public resize(width: number, height: number) {
@@ -798,7 +1096,11 @@ export class SimulationEngine {
    * Called on requestAnimationFrame.
    */
   public update() {
-    const elapsed = (performance.now() - this.startTime) / 1000
+    const now = performance.now()
+    const dt = Math.min((now - this.lastUpdateTime) / 1000, 0.1)
+    this.lastUpdateTime = now
+
+    const elapsed = (now - this.startTime) / 1000
     this.uniforms.uTime.value = elapsed
 
     const state = useStore.getState()
@@ -826,7 +1128,6 @@ export class SimulationEngine {
       editorBrushStrength,
       isEditorInteracting,
       hoveredCell,
-      isCtrlPressed,
       paintTerrain
     } = state
 
@@ -836,7 +1137,7 @@ export class SimulationEngine {
     }
 
     // Update shaders uniforms for cell hovering and editor brush highlighting
-    this.uniforms.uMode.value = mode === 'EDITOR' ? 1 : 0
+    this.uniforms.uMode.value = state.editorInteractionMode === 'CAMERA' ? 0 : (mode === 'EDITOR' ? 1 : 0)
     this.uniforms.uBrushSize.value = editorBrushSize
     const isWaterOrRain = ['RAIN', 'WATER_SOURCE', 'WATER_SINK'].includes(editorLayerType)
     this.uniforms.uBrushStrength.value = isWaterOrRain ? editorBrushStrength : editorBrushStrength * 0.1
@@ -846,20 +1147,82 @@ export class SimulationEngine {
       this.uniforms.uHoveredCell.value.set(-1, -1)
     }
 
-    // Disable controls while painting in editor mode to prevent camera movement
+    // Configure controls based on the interaction mode (CAMERA vs PAINT)
     if (this.controls) {
-      this.controls.enabled = !(mode === 'EDITOR' && isCtrlPressed)
+      const interactionMode = state.editorInteractionMode
+      const isSpacePressed = !!this.keysPressed[' ']
+      
+      if (interactionMode === 'CAMERA') {
+        // Camera mode: left mouse pans/moves, middle pans, right rotates, one touch pans/moves, two touch dolly-pan
+        if (this.controls.mouseButtons.LEFT !== THREE.MOUSE.PAN || this.controls.touches.ONE !== THREE.TOUCH.PAN) {
+          this.controls.mouseButtons.LEFT = THREE.MOUSE.PAN
+          this.controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN
+          this.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE
+          this.controls.touches.ONE = THREE.TOUCH.PAN
+          this.controls.touches.TWO = THREE.TOUCH.DOLLY_PAN
+        }
+      } else {
+        // Paint mode: left mouse does actions (or pans if Space is held), middle pans, right rotates, one touch does actions, two touch dolly-pan
+        const targetLeftMouse = isSpacePressed ? THREE.MOUSE.PAN : null
+        if (this.controls.mouseButtons.LEFT !== targetLeftMouse || this.controls.touches.ONE !== null) {
+          this.controls.mouseButtons.LEFT = targetLeftMouse
+          this.controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN
+          this.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE
+          this.controls.touches.ONE = null
+          this.controls.touches.TWO = THREE.TOUCH.DOLLY_PAN
+        }
+      }
+      this.controls.enabled = true
     }
 
+    // Keyboard camera translation (panning) on mouse/keyboard devices
+    if (this.controls) {
+      const up = !!(this.keysPressed['w'] || this.keysPressed['arrowup'])
+      const down = !!(this.keysPressed['s'] || this.keysPressed['arrowdown'])
+      const left = !!(this.keysPressed['a'] || this.keysPressed['arrowleft'])
+      const rightKey = !!(this.keysPressed['d'] || this.keysPressed['arrowright'])
+
+      if (up || down || left || rightKey) {
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion)
+        forward.y = 0
+        forward.normalize()
+
+        const rightVec = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion)
+        rightVec.y = 0
+        rightVec.normalize()
+
+        const panDelta = new THREE.Vector3()
+        const panSpeed = 25 * dt // 25 units per second
+
+        if (up) panDelta.addScaledVector(forward, panSpeed)
+        if (down) panDelta.addScaledVector(forward, -panSpeed)
+        if (left) panDelta.addScaledVector(rightVec, -panSpeed)
+        if (rightKey) panDelta.addScaledVector(rightVec, panSpeed)
+
+        if (panDelta.lengthSq() > 0) {
+          this.camera.position.add(panDelta)
+          this.controls.target.add(panDelta)
+          this.controls.update()
+        }
+      }
+    }
+
+
+
+    const isSpacePressed = !!this.keysPressed[' ']
+    const isPaintActive = mode === 'EDITOR' && 
+                          state.editorInteractionMode === 'PAINT' && 
+                          (this.isPainting || this.isErasing) && 
+                          !isSpacePressed
+
     // In editor mode, handle continuous terrain painting
-    if (mode === 'EDITOR' && isCtrlPressed && (this.isPainting || this.isErasing) && hoveredCell) {
+    if (isPaintActive && hoveredCell) {
       paintTerrain(hoveredCell.x, hoveredCell.z, this.isErasing)
     }
 
     // Sync editor interacting status to Zustand
-    const isInteracting = isCtrlPressed && (this.isPainting || this.isErasing)
-    if (isInteracting !== isEditorInteracting) {
-      state.setEditorInteracting(isInteracting)
+    if (isPaintActive !== isEditorInteracting) {
+      state.setEditorInteracting(isPaintActive)
     }
 
     // 1. Sync Terrain & Simulation properties if active terrain changed or updated
@@ -1165,7 +1528,7 @@ export class SimulationEngine {
     }
 
     // 8. Update Placement Preview Mesh
-    if (this.interactive && hoveredCell && state.selectedBuildingType !== 'NONE') {
+    if (this.interactive && hoveredCell && state.mode === 'PLAY' && state.selectedBuildingType !== 'NONE' && state.editorInteractionMode === 'PAINT') {
       const type = state.selectedBuildingType
       const size = BUILDING_SIZES[type] || { width: 1, height: 1 }
 
@@ -1248,105 +1611,7 @@ export class SimulationEngine {
 
     // 9. Run Interactive Picking Pass
     if (this.interactive && this.mouse.x !== -999 && this.mouse.y !== -999) {
-      const width = this.renderer.domElement.clientWidth
-      const height = this.renderer.domElement.clientHeight
-      const pixelX = (this.mouse.x * 0.5 + 0.5) * width
-      const pixelY = (this.mouse.y * 0.5 + 0.5) * height
-
-      const isEditor = state.mode === 'EDITOR'
-      if (this.instancedTreesPicking) {
-        Object.values(this.instancedTreesPicking).forEach(mesh => {
-          mesh.visible = !isEditor
-        })
-      }
-      if (this.instancedAnimalsPicking) {
-        Object.values(this.instancedAnimalsPicking).forEach(mesh => {
-          mesh.visible = !isEditor
-        })
-      }
-      this.humanMeshes.forEach(group => {
-        const pickMesh = group.getObjectByName('pickingMesh')
-        if (pickMesh) {
-          pickMesh.visible = !isEditor
-        }
-      })
-
-      const originalMask = this.camera.layers.mask
-      this.camera.setViewOffset(width, height, pixelX, height - pixelY, 1, 1)
-      this.camera.layers.set(PICKING_LAYER)
-
-      const currentRenderTarget = this.renderer.getRenderTarget()
-      const originalClearColor = this.renderer.getClearColor(new THREE.Color())
-      const originalClearAlpha = this.renderer.getClearAlpha()
-
-      this.renderer.setRenderTarget(this.pickingTarget)
-      this.renderer.setClearColor(0x000000, 0)
-      this.renderer.clear()
-      this.renderer.render(this.scene, this.camera)
-
-      this.renderer.setRenderTarget(currentRenderTarget)
-      this.renderer.setClearColor(originalClearColor, originalClearAlpha)
-
-      this.camera.clearViewOffset()
-      this.camera.layers.mask = originalMask
-
-      if (isEditor) {
-        if (this.instancedTreesPicking) {
-          Object.values(this.instancedTreesPicking).forEach(mesh => {
-            mesh.visible = true
-          })
-        }
-        if (this.instancedAnimalsPicking) {
-          Object.values(this.instancedAnimalsPicking).forEach(mesh => {
-            mesh.visible = true
-          })
-        }
-        this.humanMeshes.forEach(group => {
-          const pickMesh = group.getObjectByName('pickingMesh')
-          if (pickMesh) {
-            pickMesh.visible = true
-          }
-        })
-      }
-
-      this.renderer.readRenderTargetPixels(this.pickingTarget, 0, 0, 1, 1, this.pickingPixelBuffer)
-
-      const r = this.pickingPixelBuffer[0]
-      const g = this.pickingPixelBuffer[1]
-      const b = this.pickingPixelBuffer[2]
-
-      if (b === 0) {
-        // Terrain
-        if (r > 0 && g > 0) {
-          state.setHoveredCell({ x: r - 1, z: g - 1 })
-          state.setHoveredEntityId(null)
-        } else {
-          state.setHoveredCell(null)
-          state.setHoveredEntityId(null)
-        }
-      } else {
-        // Entity hovered
-        state.setHoveredCell(null)
-        const rawPickingId = (r << 8) | g
-        const pickingId = rawPickingId - 1
-        let foundId: string | null = null
-
-        if (b === 255) {
-          // Building / Tree
-          const building = buildings.find((x) => x.pickingId === pickingId || x.pickingId === rawPickingId)
-          foundId = building ? building.id : null
-        } else if (b === 254) {
-          // Human
-          const human = humans.find((h) => h.pickingId === pickingId || h.pickingId === rawPickingId)
-          foundId = human ? human.id : null
-        } else if (b === 253) {
-          // Animal
-          const animal = animals.find((a) => a.pickingId === pickingId || a.pickingId === rawPickingId)
-          foundId = animal ? animal.id : null
-        }
-
-        state.setHoveredEntityId(foundId)
-      }
+      this.performPicking()
     }
 
     // 10. Update FPS counter in store
