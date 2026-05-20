@@ -41,7 +41,7 @@ export const LoadingOverlay = () => {
         <div className="relative">
           <div className="w-24 h-24 rounded-full border-2 border-white/5 border-t-orange-500 animate-spin" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <img src="/icon.svg" alt="Loading" className="w-10 h-10 opacity-20 animate-pulse" />
+            <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Loading" className="w-10 h-10 opacity-20 animate-pulse" />
           </div>
         </div>
         <div className="flex flex-col items-center text-center">
