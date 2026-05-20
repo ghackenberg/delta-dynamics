@@ -71,28 +71,6 @@ export const LeftSidebar = () => {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 scrollbar-hide">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedBuildingType('NONE');
-              }}
-              className={`flex flex-col items-start p-3 rounded-xl border transition-all shadow-sm group ${
-                selectedBuildingType === 'NONE'
-                ? 'bg-white text-black border-white'
-                : 'bg-white/5 text-white/80 border-white/5 hover:bg-white/10 hover:border-white/20'
-              }`}
-            >
-              <div className="flex items-center gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-                <span className="text-xs font-bold">Inspect / Camera</span>
-              </div>
-              <span className={`text-[9px] mt-0.5 font-medium ${selectedBuildingType === 'NONE' ? 'text-black/60' : 'text-white/30'}`}>
-                Move camera & inspect details
-              </span>
-            </button>
 
             {buildings.map((b) => (
               <button
