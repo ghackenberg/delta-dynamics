@@ -23,7 +23,7 @@ export const TopBar = () => {
     <header className="absolute top-0 left-0 right-0 h-16 border-b border-white/10 bg-black/30 backdrop-blur-xl flex items-center px-6 justify-between z-20 shadow-2xl pointer-events-auto">
       <div className="flex items-center gap-8">
         <div className="flex items-center gap-3">
-          <img src="/icon.svg" alt="Delta Dynamics" className="w-10 h-10 rounded-lg shadow-2xl border border-white/5" />
+          <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Delta Dynamics" className="w-10 h-10 rounded-lg shadow-2xl border border-white/5" />
           <div className="flex flex-col">
             <span className="text-[10px] uppercase tracking-[0.2em] text-white font-black">Delta Dynamics</span>
             <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Ecosystem Simulator</span>

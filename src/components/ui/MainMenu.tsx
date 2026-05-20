@@ -42,7 +42,7 @@ export const MainMenu = () => {
     <div className="absolute inset-0 z-50 flex flex-col items-center bg-[#050505] pointer-events-auto overflow-y-auto scrollbar-hide py-12 px-6">
       <div className="w-full max-w-6xl flex flex-col items-center">
         <div className="flex flex-col md:flex-row items-center gap-6 mb-16 text-center md:text-left">
-          <img src="/icon.svg" alt="Delta Dynamics" className="w-20 h-20 rounded-2xl shadow-2xl border border-white/10" />
+          <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Delta Dynamics" className="w-20 h-20 rounded-2xl shadow-2xl border border-white/10" />
           <div className="flex flex-col">
             <h1 className="text-4xl md:text-5xl font-black uppercase tracking-[0.3em] text-white">Delta Dynamics</h1>
             <p className="text-sm text-white/40 font-bold uppercase tracking-[0.5em] mt-2">Ecosystem Simulator</p>
