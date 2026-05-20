@@ -31,6 +31,21 @@
     <meta name="twitter:description" content="Experience a premium GPU-accelerated water and terrain simulation with autonomous AI entities right in your browser." />
     <meta name="twitter:image" content="https://ghackenberg.github.io/delta-dynamics/og-image.png" />
 
+    <!-- PWA Meta Tags & Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => console.log('Service Worker registered successfully with scope:', reg.scope))
+            .catch((err) => console.error('Service Worker registration failed:', err));
+        });
+      }
+    </script>
+
     <script defer data-domain="ghackenberg.github.io" src="https://analytics.mentawise.com/js/script.js"></script>
   </head>
   <body>
