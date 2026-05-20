@@ -1121,6 +1121,7 @@ export class SimulationEngine {
             new THREE.CylinderGeometry(0.1, 0.1, 0.5, 6),
             new THREE.MeshBasicMaterial({ color: pickingColor })
           )
+          pickMesh.name = 'pickingMesh'
           pickMesh.position.set(0, 0.25, 0)
           pickMesh.layers.set(PICKING_LAYER)
           group.add(pickMesh)
@@ -1247,6 +1248,24 @@ export class SimulationEngine {
       const pixelX = (this.mouse.x * 0.5 + 0.5) * width
       const pixelY = (this.mouse.y * 0.5 + 0.5) * height
 
+      const isEditor = state.mode === 'EDITOR'
+      if (this.instancedTreesPicking) {
+        Object.values(this.instancedTreesPicking).forEach(mesh => {
+          mesh.visible = !isEditor
+        })
+      }
+      if (this.instancedAnimalsPicking) {
+        Object.values(this.instancedAnimalsPicking).forEach(mesh => {
+          mesh.visible = !isEditor
+        })
+      }
+      this.humanMeshes.forEach(group => {
+        const pickMesh = group.getObjectByName('pickingMesh')
+        if (pickMesh) {
+          pickMesh.visible = !isEditor
+        }
+      })
+
       const originalMask = this.camera.layers.mask
       this.camera.setViewOffset(width, height, pixelX, height - pixelY, 1, 1)
       this.camera.layers.set(PICKING_LAYER)
@@ -1265,6 +1284,25 @@ export class SimulationEngine {
 
       this.camera.clearViewOffset()
       this.camera.layers.mask = originalMask
+
+      if (isEditor) {
+        if (this.instancedTreesPicking) {
+          Object.values(this.instancedTreesPicking).forEach(mesh => {
+            mesh.visible = true
+          })
+        }
+        if (this.instancedAnimalsPicking) {
+          Object.values(this.instancedAnimalsPicking).forEach(mesh => {
+            mesh.visible = true
+          })
+        }
+        this.humanMeshes.forEach(group => {
+          const pickMesh = group.getObjectByName('pickingMesh')
+          if (pickMesh) {
+            pickMesh.visible = true
+          }
+        })
+      }
 
       this.renderer.readRenderTargetPixels(this.pickingTarget, 0, 0, 1, 1, this.pickingPixelBuffer)
 
