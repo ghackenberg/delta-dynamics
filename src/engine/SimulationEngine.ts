@@ -206,7 +206,7 @@ export class SimulationEngine {
     }
     this.renderer = new THREE.WebGLRenderer(rendererParams)
     this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.shadowMap.type = THREE.PCFShadowMap
 
     // 3. Initialize Controls (if interactive)
     if (this.interactive && this.canvas instanceof HTMLCanvasElement) {
