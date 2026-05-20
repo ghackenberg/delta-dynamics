@@ -929,16 +929,16 @@ export class SimulationEngine {
     const sunAngle = timeRatio * 2 * Math.PI - Math.PI / 2
     const intensityFactor = Math.max(0, Math.sin(sunAngle))
 
-    // Transition from beautiful twilight blue at night to sky blue during the day
-    const skyR = (45 + intensityFactor * 90) / 255
-    const skyG = (55 + intensityFactor * 151) / 255
-    const skyB = (80 + intensityFactor * 155) / 255
+    // Transition from a lighter twilight blue at night to sky blue during the day
+    const skyR = (80 + intensityFactor * 55) / 255
+    const skyG = (90 + intensityFactor * 116) / 255
+    const skyB = (115 + intensityFactor * 120) / 255
     this.scene.background = new THREE.Color(skyR, skyG, skyB)
 
-    // Higher ambient floor at night (0.90) so details are visible, rising to 1.10 during the day
-    this.ambientLight.intensity = 0.90 + intensityFactor * 0.20
-    this.hemisphereLight.intensity = 0.60 + intensityFactor * 0.20
-    this.directionalLight.intensity = intensityFactor * 3.0
+    // Significantly higher ambient floor at night (1.50) and day (1.80) to make everything easily recognizable
+    this.ambientLight.intensity = 1.50 + intensityFactor * 0.30
+    this.hemisphereLight.intensity = 1.00 + intensityFactor * 0.40
+    this.directionalLight.intensity = intensityFactor * 4.00
     this.directionalLight.position.set(Math.cos(sunAngle) * 20, Math.sin(sunAngle) * 20, 10)
 
     // 4. Render Rain Effect
