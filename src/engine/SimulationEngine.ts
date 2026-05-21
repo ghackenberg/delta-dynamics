@@ -1573,7 +1573,7 @@ export class SimulationEngine {
     }
 
     // 8. Update Placement Preview Mesh
-    if (this.interactive && hoveredCell && state.mode === 'PLAY' && state.selectedBuildingType !== 'NONE') {
+    if (this.interactive && hoveredCell && state.mode === 'PLAY' && state.selectedBuildingType !== 'NONE' && isCtrlPressed) {
       const type = state.selectedBuildingType
       const size = BUILDING_SIZES[type] || { width: 1, height: 1 }
 
