@@ -76,6 +76,8 @@ export class SimulationEngine {
   private startTime: number
   private lastUpdateTime: number
   private keysPressed: Record<string, boolean> = {}
+  private prevTouchMidX: number | null = null
+  private prevTouchMidY: number | null = null
 
   // Lights
   public ambientLight!: THREE.AmbientLight
@@ -736,12 +738,21 @@ export class SimulationEngine {
     if (!(this.canvas instanceof HTMLCanvasElement)) return
 
     const el = this.canvas
+    let mouseStartX = 0
+    let mouseStartY = 0
+    let isMouseDrag = false
 
     const onMouseMove = (e: Event) => {
       const mouseEvent = e as MouseEvent
       const rect = el.getBoundingClientRect()
       this.mouse.x = ((mouseEvent.clientX - rect.left) / rect.width) * 2 - 1
       this.mouse.y = -((mouseEvent.clientY - rect.top) / rect.height) * 2 + 1
+
+      const dx = mouseEvent.clientX - mouseStartX
+      const dy = mouseEvent.clientY - mouseStartY
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        isMouseDrag = true
+      }
     }
 
     const onMouseLeave = () => {
@@ -757,36 +768,28 @@ export class SimulationEngine {
       this.mouse.x = ((mouseEvent.clientX - rect.left) / rect.width) * 2 - 1
       this.mouse.y = -((mouseEvent.clientY - rect.top) / rect.height) * 2 + 1
 
+      mouseStartX = mouseEvent.clientX
+      mouseStartY = mouseEvent.clientY
+      isMouseDrag = false
+
       // Sync picking immediately on down
       this.performPicking()
 
       const state = useStore.getState()
-      const isPaintMode = state.mode === 'EDITOR' && state.editorInteractionMode === 'PAINT'
-      const isBuildMode = state.mode === 'PLAY' && state.editorInteractionMode === 'PAINT' && state.selectedBuildingType !== 'NONE'
+      const isCtrlPressed = mouseEvent.ctrlKey
 
-      if (isBuildMode) {
-        if (mouseEvent.button === 0 && state.hoveredCell) {
-          state.placeBuilding(state.hoveredCell.x, state.hoveredCell.z, state.selectedBuildingType)
-        }
-      } else if (state.mode === 'PLAY' && state.selectedBuildingType === 'NONE') {
-        // Inspecting is allowed in both camera and paint mode when not placing a building
-        if (mouseEvent.button === 0) {
-          const freshState = useStore.getState()
-          if (freshState.hoveredEntityId || freshState.hoveredCell) {
-            freshState.setRightSidebarOpen(true)
+      if (mouseEvent.button === 0 && isCtrlPressed) {
+        if (state.mode === 'PLAY' && state.selectedBuildingType !== 'NONE') {
+          if (state.hoveredCell) {
+            state.placeBuilding(state.hoveredCell.x, state.hoveredCell.z, state.selectedBuildingType)
           }
-        }
-      } else if (isPaintMode) {
-        if (mouseEvent.button === 0) {
-          const isSpacePressed = !!this.keysPressed[' ']
-          if (!isSpacePressed) {
-            if (state.editorBrushAction === 'ERASE') {
-              this.isErasing = true
-              this.isPainting = false
-            } else {
-              this.isPainting = true
-              this.isErasing = false
-            }
+        } else if (state.mode === 'EDITOR') {
+          if (state.editorBrushAction === 'ERASE') {
+            this.isErasing = true
+            this.isPainting = false
+          } else {
+            this.isPainting = true
+            this.isErasing = false
           }
         }
       }
@@ -795,6 +798,18 @@ export class SimulationEngine {
     const onMouseUp = (e: Event) => {
       const mouseEvent = e as MouseEvent
       if (mouseEvent.button === 0) {
+        const state = useStore.getState()
+        const isCtrlPressed = mouseEvent.ctrlKey
+
+        if (!isMouseDrag && !isCtrlPressed) {
+          if (state.mode === 'PLAY' && state.selectedBuildingType === 'NONE') {
+            const freshState = useStore.getState()
+            if (freshState.hoveredEntityId || freshState.hoveredCell) {
+              freshState.setRightSidebarOpen(true)
+            }
+          }
+        }
+
         this.isPainting = false
         this.isErasing = false
       }
@@ -958,10 +973,17 @@ export class SimulationEngine {
       const touchEvent = e as TouchEvent
       const state = useStore.getState()
       
-      const isPaintMode = state.mode === 'EDITOR' && state.editorInteractionMode === 'PAINT'
-      const isBuildMode = state.mode === 'PLAY' && state.editorInteractionMode === 'PAINT' && state.selectedBuildingType !== 'NONE'
- 
-      if (touchEvent.touches.length === 1) {
+      this.prevTouchMidX = null
+      this.prevTouchMidY = null
+
+      if (touchEvent.touches.length === 2) {
+        const touch1 = touchEvent.touches[0]
+        const touch2 = touchEvent.touches[1]
+        this.prevTouchMidX = (touch1.clientX + touch2.clientX) / 2
+        this.prevTouchMidY = (touch1.clientY + touch2.clientY) / 2
+        this.isPainting = false
+        this.isErasing = false
+      } else if (touchEvent.touches.length === 1) {
         const touch = touchEvent.touches[0]
         const rect = el.getBoundingClientRect()
         this.mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1
@@ -973,7 +995,7 @@ export class SimulationEngine {
  
         this.performPicking()
  
-        if (isPaintMode) {
+        if (state.mode === 'EDITOR') {
           if (touchEvent.cancelable) {
             touchEvent.preventDefault()
           }
@@ -984,7 +1006,7 @@ export class SimulationEngine {
             this.isPainting = true
             this.isErasing = false
           }
-        } else if (isBuildMode) {
+        } else if (state.mode === 'PLAY' && state.selectedBuildingType !== 'NONE') {
           if (touchEvent.cancelable) {
             touchEvent.preventDefault()
           }
@@ -999,10 +1021,7 @@ export class SimulationEngine {
       const touchEvent = e as TouchEvent
       const state = useStore.getState()
       
-      const isPaintMode = state.mode === 'EDITOR' && state.editorInteractionMode === 'PAINT'
-      const isBuildMode = state.mode === 'PLAY' && state.editorInteractionMode === 'PAINT' && state.selectedBuildingType !== 'NONE'
- 
-      if (isPaintMode || isBuildMode) {
+      if (state.mode === 'EDITOR' || (state.mode === 'PLAY' && state.selectedBuildingType !== 'NONE')) {
         if (touchEvent.cancelable) {
           touchEvent.preventDefault()
         }
@@ -1021,6 +1040,43 @@ export class SimulationEngine {
         }
  
         this.performPicking()
+      } else if (touchEvent.touches.length === 2) {
+        this.isPainting = false
+        this.isErasing = false
+
+        const touch1 = touchEvent.touches[0]
+        const touch2 = touchEvent.touches[1]
+        const midX = (touch1.clientX + touch2.clientX) / 2
+        const midY = (touch1.clientY + touch2.clientY) / 2
+
+        if (this.prevTouchMidX !== null && this.prevTouchMidY !== null) {
+          const dx = midX - this.prevTouchMidX
+          const dy = midY - this.prevTouchMidY
+
+          if (this.controls) {
+            const distance = this.camera.position.distanceTo(this.controls.target)
+            const heightAtDistance = 2 * distance * Math.tan((this.camera.fov * Math.PI) / 360)
+            const scale = heightAtDistance / el.clientHeight
+
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion)
+            forward.y = 0
+            forward.normalize()
+
+            const rightVec = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion)
+            rightVec.y = 0
+            rightVec.normalize()
+
+            const panDelta = new THREE.Vector3()
+            panDelta.addScaledVector(rightVec, -dx * scale)
+            panDelta.addScaledVector(forward, dy * scale)
+
+            this.camera.position.add(panDelta)
+            this.controls.target.add(panDelta)
+            this.controls.update()
+          }
+        }
+        this.prevTouchMidX = midX
+        this.prevTouchMidY = midY
       } else {
         this.isPainting = false
         this.isErasing = false
@@ -1031,10 +1087,10 @@ export class SimulationEngine {
       const touchEvent = e as TouchEvent
       const state = useStore.getState()
       
-      const isPaintMode = state.mode === 'EDITOR' && state.editorInteractionMode === 'PAINT'
-      const isBuildMode = state.mode === 'PLAY' && state.editorInteractionMode === 'PAINT' && state.selectedBuildingType !== 'NONE'
- 
-      if (isPaintMode || isBuildMode) {
+      this.prevTouchMidX = null
+      this.prevTouchMidY = null
+
+      if (state.mode === 'EDITOR' || (state.mode === 'PLAY' && state.selectedBuildingType !== 'NONE')) {
         if (touchEvent.cancelable) {
           touchEvent.preventDefault()
         }
@@ -1046,7 +1102,7 @@ export class SimulationEngine {
       if (!isDrag && touchEvent.touches.length === 0) {
         if (state.mode === 'PLAY') {
           if (state.selectedBuildingType !== 'NONE') {
-            if (state.hoveredCell && state.editorInteractionMode === 'PAINT') {
+            if (state.hoveredCell) {
               state.placeBuilding(state.hoveredCell.x, state.hoveredCell.z, state.selectedBuildingType)
             }
           } else {
@@ -1064,10 +1120,12 @@ export class SimulationEngine {
       freshState.setHoveredCell(null)
       freshState.setHoveredEntityId(null)
     }
-
+ 
     const onTouchCancel = () => {
       this.isPainting = false
       this.isErasing = false
+      this.prevTouchMidX = null
+      this.prevTouchMidY = null
       this.mouse.set(-999, -999)
       const state = useStore.getState()
       state.setHoveredCell(null)
@@ -1137,7 +1195,8 @@ export class SimulationEngine {
     }
 
     // Update shaders uniforms for cell hovering and editor brush highlighting
-    this.uniforms.uMode.value = state.editorInteractionMode === 'CAMERA' ? 0 : (mode === 'EDITOR' ? 1 : 0)
+    const isCtrlPressed = state.isCtrlPressed || !!this.keysPressed['control']
+    this.uniforms.uMode.value = (mode === 'EDITOR' && isCtrlPressed) || this.isPainting || this.isErasing ? 1 : 0
     this.uniforms.uBrushSize.value = editorBrushSize
     const isWaterOrRain = ['RAIN', 'WATER_SOURCE', 'WATER_SINK'].includes(editorLayerType)
     this.uniforms.uBrushStrength.value = isWaterOrRain ? editorBrushStrength : editorBrushStrength * 0.1
@@ -1147,30 +1206,20 @@ export class SimulationEngine {
       this.uniforms.uHoveredCell.value.set(-1, -1)
     }
 
-    // Configure controls based on the interaction mode (CAMERA vs PAINT)
+    // Configure controls based on active modifiers (pan by default, disable left click drag if Ctrl is pressed to paint/build)
     if (this.controls) {
-      const interactionMode = state.editorInteractionMode
-      const isSpacePressed = !!this.keysPressed[' ']
+      const targetLeftMouse = isCtrlPressed ? null : THREE.MOUSE.PAN
       
-      if (interactionMode === 'CAMERA') {
-        // Camera mode: left mouse pans/moves, middle pans, right rotates, one touch pans/moves, two touch dolly-rotate
-        if (this.controls.mouseButtons.LEFT !== THREE.MOUSE.PAN || this.controls.touches.ONE !== THREE.TOUCH.PAN || this.controls.touches.TWO !== THREE.TOUCH.DOLLY_ROTATE) {
-          this.controls.mouseButtons.LEFT = THREE.MOUSE.PAN
-          this.controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN
-          this.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE
-          this.controls.touches.ONE = THREE.TOUCH.PAN
-          this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE
-        }
-      } else {
-        // Paint mode: left mouse does actions (or pans if Space is held), middle pans, right rotates, one touch does actions, two touch dolly-pan
-        const targetLeftMouse = isSpacePressed ? THREE.MOUSE.PAN : null
-        if (this.controls.mouseButtons.LEFT !== targetLeftMouse || this.controls.touches.ONE !== null) {
-          this.controls.mouseButtons.LEFT = targetLeftMouse
-          this.controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN
-          this.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE
-          this.controls.touches.ONE = null
-          this.controls.touches.TWO = THREE.TOUCH.DOLLY_PAN
-        }
+      if (
+        this.controls.mouseButtons.LEFT !== targetLeftMouse || 
+        this.controls.touches.ONE !== null || 
+        this.controls.touches.TWO !== THREE.TOUCH.DOLLY_ROTATE
+      ) {
+        this.controls.mouseButtons.LEFT = targetLeftMouse
+        this.controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN
+        this.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE
+        this.controls.touches.ONE = null
+        this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE
       }
       this.controls.enabled = true
     }
@@ -1209,11 +1258,7 @@ export class SimulationEngine {
 
 
 
-    const isSpacePressed = !!this.keysPressed[' ']
-    const isPaintActive = mode === 'EDITOR' && 
-                          state.editorInteractionMode === 'PAINT' && 
-                          (this.isPainting || this.isErasing) && 
-                          !isSpacePressed
+    const isPaintActive = mode === 'EDITOR' && (this.isPainting || this.isErasing)
 
     // In editor mode, handle continuous terrain painting
     if (isPaintActive && hoveredCell) {
@@ -1528,7 +1573,7 @@ export class SimulationEngine {
     }
 
     // 8. Update Placement Preview Mesh
-    if (this.interactive && hoveredCell && state.mode === 'PLAY' && state.selectedBuildingType !== 'NONE' && state.editorInteractionMode === 'PAINT') {
+    if (this.interactive && hoveredCell && state.mode === 'PLAY' && state.selectedBuildingType !== 'NONE') {
       const type = state.selectedBuildingType
       const size = BUILDING_SIZES[type] || { width: 1, height: 1 }
 

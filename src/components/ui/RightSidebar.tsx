@@ -27,10 +27,10 @@ export const RightSidebar = () => {
   }, [hoveredEntityId, buildingsState, humans, animals])
 
   return (
-    <aside className={`fixed md:absolute top-20 right-0 md:right-4 bottom-32 w-80 border border-r-0 md:border-r border-white/10 bg-black/30 backdrop-blur-xl rounded-l-2xl md:rounded-2xl flex flex-col ${
+    <aside className={`fixed lg:absolute top-20 right-0 lg:right-4 bottom-32 w-80 border border-r-0 lg:border-r border-white/10 bg-black/30 backdrop-blur-xl rounded-l-2xl lg:rounded-2xl flex flex-col ${
       lastOpenedSidebar === 'right' ? 'z-45' : 'z-40'
-    } md:z-10 overflow-hidden shadow-2xl pointer-events-auto transition-transform duration-300 ease-in-out ${
-      rightSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+    } lg:z-10 overflow-hidden shadow-2xl pointer-events-auto transition-transform duration-300 ease-in-out ${
+      rightSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
     }`}>
       <div className="p-4 border-b border-white/5 flex justify-between items-center">
         <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Information</p>
@@ -38,7 +38,7 @@ export const RightSidebar = () => {
           {(hoveredEntity || hoveredCell) && <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />}
           <button 
             onClick={(e) => { e.stopPropagation(); setRightSidebarOpen(false); }}
-            className="md:hidden text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
+            className="lg:hidden text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />

@@ -124,7 +124,6 @@ export interface GameState {
   editorBrushStrength: number
   isEditorInteracting: boolean
   isCtrlPressed: boolean
-  editorInteractionMode: 'CAMERA' | 'PAINT'
   editorBrushAction: 'PAINT' | 'ERASE'
   hoveredCell: { x: number, z: number } | null
   hoveredEntityId: string | null
@@ -137,7 +136,6 @@ export interface GameState {
   setEditorLayerType: (type: LayerType) => void
   setEditorBrushSize: (size: number) => void
   setEditorBrushStrength: (strength: number) => void
-  setEditorInteractionMode: (mode: 'CAMERA' | 'PAINT') => void
   setEditorBrushAction: (action: 'PAINT' | 'ERASE') => void
   setHoveredCell: (cell: { x: number, z: number } | null) => void
   setHoveredEntityId: (id: string | null) => void

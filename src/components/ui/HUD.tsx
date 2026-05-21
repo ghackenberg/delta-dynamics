@@ -10,6 +10,7 @@ import { LoadingOverlay } from './LoadingOverlay'
 import { DuplicateModal } from './DuplicateModal'
 import { RenameModal } from './RenameModal'
 import { DeleteModal } from './DeleteModal'
+import { ControlHelper } from './ControlHelper'
 
 interface HUDProps {
   children: ReactNode
@@ -24,8 +25,6 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
   const setLeftSidebarOpen = useStore((state) => state.setLeftSidebarOpen)
   const setRightSidebarOpen = useStore((state) => state.setRightSidebarOpen)
   const mode = useStore((state) => state.mode)
-  const editorInteractionMode = useStore((state) => state.editorInteractionMode)
-  const setEditorInteractionMode = useStore((state) => state.setEditorInteractionMode)
 
   const duplicateMatch = useMatch('/duplicate/:terrainId')
   const renameMatch = useMatch('/rename/:terrainId')
@@ -48,46 +47,7 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
           <LeftSidebar />
           <RightSidebar />
           <BottomBar onInitAI={onInitAI} onConsultAI={onConsultAI} />
-
-          {/* Floating Mode Toggle Capsule */}
-          <div className="pointer-events-auto fixed top-20 left-1/2 -translate-x-1/2 z-30 flex bg-black/60 backdrop-blur-xl border border-white/10 p-1 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] scale-100 hover:scale-[1.02] transition-all duration-300">
-            <button
-              onClick={() => setEditorInteractionMode('CAMERA')}
-              className={`flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 ${
-                editorInteractionMode === 'CAMERA'
-                  ? 'bg-white/10 text-white shadow-md'
-                  : 'text-white/40 hover:text-white/70'
-              }`}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-3.5 md:h-3.5">
-                <circle cx="12" cy="12" r="10"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-              Camera
-            </button>
-            <button
-              onClick={() => setEditorInteractionMode('PAINT')}
-              className={`flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 ${
-                editorInteractionMode === 'PAINT'
-                  ? 'bg-orange-600/80 text-white shadow-md shadow-orange-500/20'
-                  : 'text-white/40 hover:text-white/70'
-              }`}
-            >
-              {mode === 'EDITOR' ? (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-3.5 md:h-3.5">
-                  <path d="M12 20h9"/>
-                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                </svg>
-              ) : (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-3.5 md:h-3.5">
-                  <path d="m15 5 4 4"/>
-                  <path d="M21.5 2.5a2.12 2.12 0 0 0-3 0L11 9.5l4 4 7-7.5a2.12 2.12 0 0 0 0-3z"/>
-                  <path d="m9 11-6 6v3h3l6-6"/>
-                </svg>
-              )}
-              {mode === 'EDITOR' ? 'Paint' : 'Build'}
-            </button>
-          </div>
+          <ControlHelper />
 
           {/* Floating Mobile Toggle Buttons */}
           {!leftSidebarOpen && (
@@ -96,7 +56,7 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
                 e.stopPropagation()
                 setLeftSidebarOpen(true)
               }}
-              className="md:hidden pointer-events-auto fixed top-20 left-4 z-20 flex items-center justify-center w-10 h-10 rounded-xl bg-black/60 border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all backdrop-blur-md shadow-lg"
+              className="lg:hidden pointer-events-auto fixed top-20 left-4 z-20 flex items-center justify-center w-10 h-10 rounded-xl bg-black/60 border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all backdrop-blur-md shadow-lg"
               title="Open Tools"
             >
               {mode === 'PLAY' ? (
@@ -121,7 +81,7 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
                 e.stopPropagation()
                 setRightSidebarOpen(true)
               }}
-              className="md:hidden pointer-events-auto fixed top-20 right-4 z-20 flex items-center justify-center w-10 h-10 rounded-xl bg-black/60 border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all backdrop-blur-md shadow-lg"
+              className="lg:hidden pointer-events-auto fixed top-20 right-4 z-20 flex items-center justify-center w-10 h-10 rounded-xl bg-black/60 border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all backdrop-blur-md shadow-lg"
               title="Open Info"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

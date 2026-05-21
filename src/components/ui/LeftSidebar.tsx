@@ -51,10 +51,10 @@ export const LeftSidebar = () => {
   ]
 
   return (
-    <aside className={`fixed md:absolute top-20 left-0 md:left-4 bottom-32 w-48 border border-l-0 md:border-l border-white/10 bg-black/30 backdrop-blur-xl rounded-r-2xl md:rounded-2xl flex flex-col ${
+    <aside className={`fixed lg:absolute top-20 left-0 lg:left-4 bottom-32 w-48 border border-l-0 lg:border-l border-white/10 bg-black/30 backdrop-blur-xl rounded-r-2xl lg:rounded-2xl flex flex-col ${
       lastOpenedSidebar === 'left' ? 'z-45' : 'z-40'
-    } md:z-10 overflow-hidden shadow-2xl pointer-events-auto transition-transform duration-300 ease-in-out ${
-      leftSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    } lg:z-10 overflow-hidden shadow-2xl pointer-events-auto transition-transform duration-300 ease-in-out ${
+      leftSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
     }`}>
       {mode === 'PLAY' ? (
         <>
@@ -62,7 +62,7 @@ export const LeftSidebar = () => {
             <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Construction</p>
             <button 
               onClick={(e) => { e.stopPropagation(); setLeftSidebarOpen(false); }}
-              className="md:hidden text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
+              className="lg:hidden text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -117,7 +117,7 @@ export const LeftSidebar = () => {
             <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">Paint Tools</p>
             <button 
               onClick={(e) => { e.stopPropagation(); setLeftSidebarOpen(false); }}
-              className="md:hidden text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
+              className="lg:hidden text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -191,25 +191,6 @@ export const LeftSidebar = () => {
               />
             </div>
 
-            <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/5 animate-in fade-in duration-300">
-              <p className="text-[10px] text-white/40 leading-relaxed font-medium">
-                <span className="text-white/60 font-bold block mb-1.5 uppercase tracking-wider text-[9.5px]">Controls</span>
-                <span className="text-white/60 block font-bold text-[8.5px] uppercase tracking-wider mt-1">Touch:</span>
-                • Camera Mode:<br/>
-                &nbsp;&nbsp;- 1 finger: Pan / Inspect<br/>
-                &nbsp;&nbsp;- 2 fingers: Zoom & Rotate<br/>
-                • Paint/Build Mode:<br/>
-                &nbsp;&nbsp;- 1 finger: Sculpt / Paint / Build / Inspect<br/>
-                &nbsp;&nbsp;- 2 fingers: Zoom & Pan<br/>
-                <span className="text-white/60 block font-bold text-[8.5px] uppercase tracking-wider mt-2">Mouse/Keyboard:</span>
-                • Left-click/drag: Sculpt / Paint / Build / Inspect<br/>
-                • WASD / Arrow Keys: Pan camera<br/>
-                • Space + Left-drag: Pan camera<br/>
-                • Right-click/drag: Rotate camera<br/>
-                • Middle-click/drag: Pan camera<br/>
-                • Scroll wheel: Zoom (Smart focus under mouse)
-              </p>
-            </div>
 
             <div className="mt-auto pt-4 border-t border-white/5">
               <button
