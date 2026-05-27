@@ -41,7 +41,7 @@ export const TerrainCard = ({ terrain, onDuplicate, onRename, onEdit, onDelete }
       <div
         onClick={() => {
           if (isStandard) {
-            navigate(`/duplicate/${terrain.id}`)
+            navigate(`/play/${terrain.id}`)
           } else {
             navigate(`/edit/${terrain.id}`)
           }
