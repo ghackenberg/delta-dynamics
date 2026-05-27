@@ -6,6 +6,7 @@ export const TopBar = () => {
   const mode = useStore((state) => state.mode)
   const isDirty = useStore((state) => state.isDirty)
   const saveActiveTerrain = useStore((state) => state.saveActiveTerrain)
+  const activeTerrainId = useStore((state) => state.activeTerrainId)
   const fps = useStore((state) => state.fps)
   const fpsHistory = useStore((state) => state.fpsHistory)
   const resources = useStore((state) => state.resources)
@@ -14,6 +15,18 @@ export const TopBar = () => {
   const day = useStore((state) => state.day)
   const isNight = useStore((state) => state.isNight)
   const rainIntensity = useStore((state) => state.rainIntensity)
+
+  const isStandard = !activeTerrainId.startsWith('custom-')
+
+  const handleModeChange = (targetMode: 'PLAY' | 'EDITOR') => {
+    if (targetMode === mode) return
+    if (targetMode === 'EDITOR' && isStandard) {
+      navigate(`/duplicate/${activeTerrainId}`)
+    } else {
+      const route = targetMode === 'EDITOR' ? 'edit' : 'play'
+      navigate(`/${route}/${activeTerrainId}`, { replace: true })
+    }
+  }
 
   const hours = Math.floor(gameTime / 60)
   const minutes = Math.floor(gameTime % 60)
@@ -48,12 +61,51 @@ export const TopBar = () => {
           </button>
           <button
             onClick={() => {
-              navigate(-1)
+              navigate('/')
             }}
             className="px-3 md:px-4 py-1.5 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-red-500/20 transition-all"
           >
             Exit
           </button>
+        </div>
+
+        <div className="h-8 w-[1px] bg-white/10 mx-1" />
+
+        {/* Mode Switcher Toggle */}
+        <div className="flex items-center shrink-0">
+          <div className="flex bg-white/5 border border-white/10 rounded-full p-1 shadow-inner">
+            <button
+              disabled={isStandard}
+              onClick={() => handleModeChange('EDITOR')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all duration-300 active:scale-95 ${
+                isStandard
+                  ? 'opacity-30 cursor-not-allowed text-white/30'
+                  : mode === 'EDITOR'
+                  ? 'bg-orange-600 text-white shadow-md shadow-orange-500/10'
+                  : 'text-white/40 hover:text-white/80'
+              }`}
+              title={isStandard ? "Template terrains are read-only" : "Switch to Editor"}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+              </svg>
+              <span>Editor</span>
+            </button>
+            <button
+              onClick={() => handleModeChange('PLAY')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all duration-300 active:scale-95 ${
+                mode === 'PLAY'
+                  ? 'bg-orange-600 text-white shadow-md shadow-orange-500/10'
+                  : 'text-white/40 hover:text-white/80'
+              }`}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span>Simulate</span>
+            </button>
+          </div>
         </div>
 
         <div className="hidden lg:block h-8 w-[1px] bg-white/10 mx-1" />

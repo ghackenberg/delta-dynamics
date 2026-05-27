@@ -78,6 +78,25 @@ export const MainMenu = () => {
               <div className="flex-1 h-[1px] bg-gradient-to-r from-white/10 via-white/5 to-transparent" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Create New Card */}
+              <div
+                onClick={() => navigate('/create')}
+                className="w-full h-full min-h-[340px] relative flex flex-col items-center justify-center rounded-[2.5rem] border border-dashed border-white/20 bg-white/[0.02] hover:bg-white/[0.06] hover:border-orange-500/50 hover:shadow-[0_20px_50px_rgba(0,0,0,0.6),0_0_40px_rgba(249,115,22,0.05)] transition-all duration-500 overflow-hidden cursor-pointer group hover:scale-[1.02] p-8 text-center"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-white/5 group-hover:bg-orange-500/10 border border-white/10 group-hover:border-orange-500/20 flex items-center justify-center mb-6 transition-all duration-500 group-hover:scale-110 shadow-lg">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/40 group-hover:text-orange-500 transition-colors duration-500">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </div>
+                <span className="text-lg font-black uppercase tracking-[0.2em] text-white/60 group-hover:text-white transition-colors duration-500">
+                  Create New
+                </span>
+                <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mt-2 max-w-[200px] leading-relaxed">
+                  Start a new landscape from scratch
+                </p>
+              </div>
+
               {sortedCustomTerrains.map((t) => (
                 <TerrainCard 
                   key={t.id} 

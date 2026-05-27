@@ -39,11 +39,17 @@ export const TerrainCard = ({ terrain, onDuplicate, onRename, onEdit, onDelete }
   return (
     <div className="relative group">
       <div
-        onClick={() => navigate(`/play/${terrain.id}`)}
+        onClick={() => {
+          if (isStandard) {
+            navigate(`/duplicate/${terrain.id}`)
+          } else {
+            navigate(`/edit/${terrain.id}`)
+          }
+        }}
         className={`w-full relative flex flex-col items-center rounded-[2.5rem] border transition-all duration-500 overflow-hidden backdrop-blur-xl cursor-pointer group-hover:scale-[1.02] ${
           isStandard
-            ? 'border-white/30 bg-white/[0.1] group-hover:bg-white/[0.18] group-hover:border-orange-500/70 group-hover:shadow-[0_20px_50_rgba(0,0,0,0.6),0_0_50px_rgba(249,115,22,0.2)]'
-            : 'border-white/30 bg-white/[0.1] group-hover:bg-white/[0.18] group-hover:border-white/50 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.6),0_0_50px_rgba(255,255,255,0.1)]'
+            ? 'border-white/20 bg-white/[0.05] group-hover:bg-white/[0.08] group-hover:border-orange-500/70 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.6),0_0_50px_rgba(249,115,22,0.15)]'
+            : 'border-white/20 bg-white/[0.05] group-hover:bg-white/[0.08] group-hover:border-white/40 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.6),0_0_50px_rgba(255,255,255,0.08)]'
         }`}
       >
         {/* Terrain Preview Header */}
@@ -63,6 +69,17 @@ export const TerrainCard = ({ terrain, onDuplicate, onRename, onEdit, onDelete }
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+          
+          {/* Status Badges */}
+          {isStandard ? (
+            <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/60 border border-white/10 text-white/50 text-[8px] font-black uppercase tracking-widest backdrop-blur-md">
+              Template
+            </div>
+          ) : (
+            <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-orange-600/80 border border-orange-500/20 text-white text-[8px] font-black uppercase tracking-widest backdrop-blur-md shadow-lg shadow-orange-500/10">
+              Custom
+            </div>
+          )}
         </div>
 
         <div className="p-8 w-full flex flex-col items-center">
@@ -80,53 +97,98 @@ export const TerrainCard = ({ terrain, onDuplicate, onRename, onEdit, onDelete }
             isStandard ? 'bg-white/30 group-hover:bg-orange-500' : 'bg-white/30 group-hover:bg-white/60'
           }`} />
 
-          <div className="flex gap-2.5 mt-6">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onDuplicate(terrain)
-              }}
-              className="p-3 rounded-2xl border transition-all duration-300 z-20 group/btn bg-white/20 hover:bg-white/30 border-white/20 hover:border-white/50"
-              title="Duplicate Terrain"
-            >
-              <DuplicateIcon size={18} className="transition-colors text-white/60 group-hover/btn:text-white" />
-            </button>
-
-            {!isStandard && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onRename?.(terrain)
-                  }}
-                  className="p-3 rounded-2xl border bg-white/20 hover:bg-white/30 border-white/20 hover:border-white/50 transition-all duration-300 z-20 group/btn"
-                  title="Rename Terrain"
-                >
-                  <RenameIcon size={18} className="text-white/60 group-hover/btn:text-white transition-colors" />
-                </button>
+          {/* Redesigned Button Section */}
+          {isStandard ? (
+            <div className="flex w-full gap-2.5 mt-6">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDuplicate(terrain)
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border transition-all duration-300 z-20 group/btn bg-orange-600 hover:bg-orange-500 border-orange-500/20 hover:border-orange-500/40 text-white font-black uppercase tracking-wider text-[10px] shadow-lg shadow-orange-500/10 active:scale-95"
+                title="Duplicate Template to Edit"
+              >
+                <DuplicateIcon size={14} className="text-white" />
+                <span>Duplicate to Edit</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigate(`/play/${terrain.id}`)
+                }}
+                className="p-3 rounded-2xl border bg-white/10 hover:bg-white/20 border-white/10 hover:border-white/30 transition-all duration-300 z-20 group/btn active:scale-95"
+                title="Run Simulation (Play Mode)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-white/60 group-hover/btn:text-white transition-colors">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col w-full gap-3 mt-6">
+              <div className="flex w-full gap-2.5">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     onEdit?.(terrain)
                   }}
-                  className="p-3 rounded-2xl border bg-white/20 hover:bg-white/30 border-white/20 hover:border-white/50 transition-all duration-300 z-20 group/btn"
-                  title="Edit Terrain"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border transition-all duration-300 z-20 group/btn bg-white hover:bg-white/95 border-white text-black font-black uppercase tracking-wider text-[10px] active:scale-95 shadow-md"
+                  title="Open in Editor"
                 >
-                  <EditIcon size={18} className="text-white/60 group-hover/btn:text-white transition-colors" />
+                  <EditIcon size={14} className="text-black" />
+                  <span>Open Editor</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigate(`/play/${terrain.id}`)
+                  }}
+                  className="p-3 rounded-2xl border bg-white/10 hover:bg-white/20 border-white/10 hover:border-white/30 transition-all duration-300 z-20 group/btn active:scale-95"
+                  title="Run Simulation (Play Mode)"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-white/60 group-hover/btn:text-white transition-colors">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="flex gap-2 justify-center w-full">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDuplicate(terrain)
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/10 transition-all duration-300 z-20 text-[9px] font-bold text-white/50 hover:text-white active:scale-95"
+                  title="Duplicate Design"
+                >
+                  <DuplicateIcon size={12} className="text-white/40 group-hover/btn:text-white/80" />
+                  <span>Copy</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRename?.(terrain)
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/10 transition-all duration-300 z-20 text-[9px] font-bold text-white/50 hover:text-white active:scale-95"
+                  title="Rename Design"
+                >
+                  <RenameIcon size={12} className="text-white/40 group-hover/btn:text-white/80" />
+                  <span>Rename</span>
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     onDelete?.(terrain)
                   }}
-                  className="p-3 rounded-2xl border bg-red-500/10 hover:bg-red-500/20 border-red-500/20 hover:border-red-500/40 transition-all duration-300 z-20 group/btn"
-                  title="Delete Terrain"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border bg-red-500/5 hover:bg-red-500/10 border-red-500/10 hover:border-red-500/20 transition-all duration-300 z-20 text-[9px] font-bold text-red-400/50 hover:text-red-400 active:scale-95"
+                  title="Delete Design"
                 >
-                  <TrashIcon size={18} className="text-red-400/60 group-hover/btn:text-red-400 transition-colors" />
+                  <TrashIcon size={12} className="text-red-400/40 group-hover/btn:text-red-400/80" />
+                  <span>Delete</span>
                 </button>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

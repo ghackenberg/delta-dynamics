@@ -12,6 +12,7 @@ function RouteSync() {
   const duplicateMatch = useMatch('/duplicate/:terrainId')
   const renameMatch = useMatch('/rename/:terrainId')
   const deleteMatch = useMatch('/delete/:terrainId')
+  const createMatch = useMatch('/create')
   const menuMatch = useMatch('/')
   const navigate = useNavigate()
   const location = useLocation()
@@ -54,11 +55,14 @@ function RouteSync() {
       const terrainId = segments[1]
       navigate('/', { replace: true })
       setTimeout(() => navigate(`/delete/${terrainId}`), 0)
+    } else if (segments[0] === 'create') {
+      navigate('/', { replace: true })
+      setTimeout(() => navigate('/create'), 0)
     }
   }, [location.pathname, navigate])
 
   useEffect(() => {
-    if (menuMatch || duplicateMatch || renameMatch || deleteMatch) {
+    if (menuMatch || duplicateMatch || renameMatch || deleteMatch || createMatch) {
       if (gameState !== 'MENU') setGameState('MENU')
     } else if (playMatch) {
       const { terrainId } = playMatch.params
@@ -69,13 +73,18 @@ function RouteSync() {
       }
     } else if (editMatch) {
       const { terrainId } = editMatch.params
+      if (terrainId && !terrainId.startsWith('custom-')) {
+        // Enforce that standard terrains cannot be edited directly; redirect to duplicate
+        navigate(`/duplicate/${terrainId}`, { replace: true })
+        return
+      }
       if (gameState !== 'PLAY') setGameState('PLAY')
       if (mode !== 'EDITOR') setMode('EDITOR')
       if (terrainId && terrainId !== activeTerrainId) {
         loadTerrain(terrainId)
       }
     }
-  }, [menuMatch, playMatch, editMatch, duplicateMatch, renameMatch, deleteMatch, gameState, mode, activeTerrainId, setGameState, setMode, loadTerrain])
+  }, [menuMatch, playMatch, editMatch, duplicateMatch, renameMatch, deleteMatch, createMatch, gameState, mode, activeTerrainId, setGameState, setMode, loadTerrain, navigate])
 
   return null
 }
@@ -97,6 +106,7 @@ function App() {
         <Route path="/duplicate/:terrainId" element={null} />
         <Route path="/rename/:terrainId" element={null} />
         <Route path="/delete/:terrainId" element={null} />
+        <Route path="/create" element={null} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
