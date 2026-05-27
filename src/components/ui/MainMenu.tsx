@@ -111,13 +111,66 @@ export const MainMenu = () => {
           </section>
         </div>
 
-        <div className="mt-24 mb-12 flex flex-col items-center gap-4 opacity-20">
-          <span className="text-[10px] font-black uppercase tracking-[0.4em]">Early Access Build</span>
-          <div className="flex gap-8">
-            <span className="text-[9px] font-bold">v0.8.2-delta</span>
-            <span className="text-[9px] font-bold">2026.05.18</span>
+        {/* Redesigned Structured Footer */}
+        <footer className="w-full border-t border-white/10 mt-32 pt-12 pb-16 flex flex-col items-center gap-10">
+          <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
+            {/* Project Column */}
+            <div className="flex flex-col gap-2.5 items-center md:items-start">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Ecosystem Simulator</span>
+              <span className="text-sm font-black uppercase tracking-[0.15em] text-white">Delta Dynamics</span>
+              <p className="text-[10px] text-white/30 leading-relaxed font-bold uppercase tracking-wider max-w-xs mx-auto md:mx-0">
+                A sandbox ecosystem and water flow simulator for studying dynamic landscapes.
+              </p>
+            </div>
+            
+            {/* Author Column */}
+            <div className="flex flex-col gap-2.5 items-center md:items-start">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Academic Advisor</span>
+              <span className="text-sm font-black uppercase tracking-[0.15em] text-white">Dr. Georg Hackenberg</span>
+              <a
+                href="https://ghackenberg.github.io/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/10 hover:border-white/15 transition-all duration-300 text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white active:scale-95 shadow-sm mt-1"
+                title="Georg Hackenberg's Homepage"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/30 group-hover:text-white transition-colors">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <span>ghackenberg.github.io</span>
+              </a>
+            </div>
+
+            {/* Source Code Column */}
+            <div className="flex flex-col gap-2.5 items-center md:items-start">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Repository</span>
+              <span className="text-sm font-black uppercase tracking-[0.15em] text-white">Open Source Code</span>
+              <a
+                href="https://github.com/ghackenberg/delta-dynamics"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/10 hover:border-white/15 transition-all duration-300 text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white active:scale-95 shadow-sm mt-1"
+                title="View Source on GitHub"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/30 group-hover:text-white transition-colors">
+                  <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+                  <path d="M9 18c-4.51 2-5-2-7-2"/>
+                </svg>
+                <span>GitHub Project Page</span>
+              </a>
+            </div>
           </div>
-        </div>
+          
+          {/* Build Info */}
+          <div className="flex flex-col items-center gap-2 border-t border-white/5 w-full pt-8 opacity-25">
+            <span className="text-[9px] font-black uppercase tracking-[0.4em]">Early Access Build</span>
+            <div className="flex gap-8">
+              <span className="text-[8px] font-bold">v0.8.2-delta</span>
+              <span className="text-[8px] font-bold">2026.05.18</span>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   )
