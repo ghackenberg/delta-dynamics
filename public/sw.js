@@ -1,11 +1,11 @@
 const CACHE_NAME = 'delta-dynamics-cache-v1';
 const ASSETS_TO_CACHE = [
-  '/delta-dynamics/',
-  '/delta-dynamics/index.html',
-  '/delta-dynamics/icon.svg',
-  '/delta-dynamics/icon-192.png',
-  '/delta-dynamics/icon-512.png',
-  '/delta-dynamics/manifest.webmanifest'
+  '/',
+  '/index.html',
+  '/icon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/manifest.webmanifest'
 ];
 
 // Install Event

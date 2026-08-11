@@ -2,7 +2,7 @@
   "name": "Delta Dynamics",
   "short_name": "Delta Dynamics",
   "description": "Premium low-poly terrain and water ecosystem simulator.",
-  "start_url": "/delta-dynamics/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#111827",
   "theme_color": "#111827",

@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ghackenberg.github.io/delta-dynamics/"><strong>Play Live Demo »</strong></a>
+  <a href="https://dd.hackenberg.tech/"><strong>Play Live Demo »</strong></a>
 </p>
 
 ---
@@ -41,7 +41,7 @@ npm install
 npm run dev
 ```
 
-The application will run locally at `http://localhost:5173/delta-dynamics/`.
+The application will run locally at `http://localhost:5173/`.
 
 ## Screenshots
 
