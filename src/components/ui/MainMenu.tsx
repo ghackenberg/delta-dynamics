@@ -128,7 +128,7 @@ export const MainMenu = () => {
               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Academic Advisor</span>
               <span className="text-sm font-black uppercase tracking-[0.15em] text-white">Dr. Georg Hackenberg</span>
               <a
-                href="https://ghackenberg.github.io/"
+                href="https://hackenberg.tech/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/10 hover:border-white/15 transition-all duration-300 text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white active:scale-95 shadow-sm mt-1"
@@ -138,7 +138,7 @@ export const MainMenu = () => {
                   <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
-                <span>ghackenberg.github.io</span>
+                <span>hackenberg.tech</span>
               </a>
             </div>
 

@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://dd.hackenberg.tech/"><strong>Play Live Demo »</strong></a>
+  <a href="https://hackenberg.tech/delta-dynamics/"><strong>Play Live Demo »</strong></a>
 </p>
 
 ---
