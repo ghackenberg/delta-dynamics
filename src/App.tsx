@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, useMatch, useNavigate, useLocation } from 'react-router-dom'
+import { track } from '@plausible-analytics/tracker'
 import { SimulationViewport } from './components/scene/SimulationViewport'
 import { HUD } from './components/ui/HUD'
 import { useAI } from './hooks/useAI'
@@ -17,6 +18,14 @@ function RouteSync() {
   const navigate = useNavigate()
   const location = useLocation()
   const hasInitialized = useRef(false)
+  const lastTrackedUrl = useRef<string | null>(null)
+
+  useEffect(() => {
+    const url = window.location.href
+    if (lastTrackedUrl.current === url) return
+    lastTrackedUrl.current = url
+    track('pageview', { url })
+  }, [location.pathname, location.search])
   
   const gameState = useStore((state) => state.gameState)
   const mode = useStore((state) => state.mode)

@@ -9,6 +9,7 @@ initPlausible({
   domain: 'hackenberg.tech/delta-dynamics',
   endpoint: 'https://analytics.mentawise.com/api/event',
   hashBasedRouting: true,
+  autoCapturePageviews: false,
 })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
