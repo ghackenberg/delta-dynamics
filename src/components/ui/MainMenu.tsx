@@ -176,7 +176,7 @@ export const MainMenu = () => {
                 onClick={() => navigate('/privacy')}
                 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 hover:text-white transition-colors"
               >
-                Datenschutz &amp; Tracking
+                Datenschutz
               </button>
             </div>
             <div className="flex flex-col items-center gap-2 opacity-25">

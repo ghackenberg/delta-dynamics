@@ -87,39 +87,48 @@ export const PrivacyPage = () => {
           <div className="flex items-center justify-between gap-6">
             <div className="space-y-1">
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white">
-                Privatsphäre-Einstellungen · Web-Analyse
+                Cookiefreie Web-Analyse (Plausible)
               </h2>
               <p className="text-xs text-white/65 leading-relaxed max-w-xl">
-                Wir nutzen eine EU-gehostete Instanz von Plausible Analytics ohne Cookies und ohne Speicherung von IP-Adressen (Art. 6 Abs. 1 lit. f DSGVO). Sie können die Erfassung jederzeit deaktivieren.
+                Wir nutzen eine EU-gehostete Instanz von Plausible Analytics ohne Cookies und ohne Speicherung von IP-Adressen (Art. 6 Abs. 1 lit. f DSGVO). Mit dem Schalter können Sie die Erfassung jederzeit ein- oder ausschalten.
               </p>
               {browserSignalActive && (
                 <p className="text-xs text-emerald-300/90 pt-1">
-                  Ihr Browser sendet ein Global-Privacy-Control- (GPC) oder Do-Not-Track-Signal (DNT) – die Analyse wird daher automatisch blockiert.
+                  Ihr Browser sendet ein Global-Privacy-Control- (GPC) oder Do-Not-Track-Signal (DNT) – die Analyse ist daher automatisch ausgeschaltet.
                 </p>
               )}
             </div>
 
-            <button
-              type="button"
-              role="switch"
-              aria-checked={!trackingDisabled}
-              aria-label="Cookiefreie Web-Analyse aktivieren oder deaktivieren"
-              disabled={browserSignalActive}
-              onClick={toggleAnalytics}
-              className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
-                browserSignalActive
-                  ? 'cursor-not-allowed bg-white/10 border-white/10 opacity-50'
-                  : !trackingDisabled
-                    ? 'cursor-pointer bg-orange-500 border-orange-400 shadow-lg shadow-orange-500/20'
-                    : 'cursor-pointer bg-white/10 border-white/20 hover:bg-white/15'
-              }`}
-            >
+            <div className="flex shrink-0 items-center gap-3">
               <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                  !trackingDisabled ? 'translate-x-6' : 'translate-x-1'
+                className={`text-xs font-bold uppercase tracking-wider select-none ${
+                  !trackingDisabled ? 'text-orange-400' : 'text-white/45'
                 }`}
-              />
-            </button>
+              >
+                {!trackingDisabled ? 'Ein' : 'Aus'}
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!trackingDisabled}
+                aria-label="Cookiefreie Web-Analyse ein- oder ausschalten"
+                disabled={browserSignalActive}
+                onClick={toggleAnalytics}
+                className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+                  browserSignalActive
+                    ? 'cursor-not-allowed bg-white/10 border-white/10 opacity-50'
+                    : !trackingDisabled
+                      ? 'cursor-pointer bg-orange-500 border-orange-400 shadow-lg shadow-orange-500/20'
+                      : 'cursor-pointer bg-white/10 border-white/20 hover:bg-white/15'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                    !trackingDisabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
           <p className="mt-3 text-[11px] text-white/45">
             Hinweis: Beim Deaktivieren wird ausschließlich der lokale Browser-Eintrag <code className="text-white/70">plausible_ignore=true</code> gesetzt (gilt für die gesamte Domain <code className="text-white/70">hackenberg.tech</code>). Beim Aktivieren wird dieser Eintrag wieder entfernt.

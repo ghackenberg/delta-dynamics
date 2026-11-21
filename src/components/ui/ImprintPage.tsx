@@ -31,7 +31,7 @@ export const ImprintPage = () => {
             onClick={() => navigate('/privacy', { replace: true })}
             className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors"
           >
-            Datenschutz &amp; Tracking →
+            Datenschutz →
           </button>
         </div>
 
