@@ -162,12 +162,29 @@ export const MainMenu = () => {
             </div>
           </div>
           
-          {/* Build Info */}
-          <div className="flex flex-col items-center gap-2 border-t border-white/5 w-full pt-8 opacity-25">
-            <span className="text-[9px] font-black uppercase tracking-[0.4em]">Early Access Build</span>
-            <div className="flex gap-8">
-              <span className="text-[8px] font-bold">v0.8.2-delta</span>
-              <span className="text-[8px] font-bold">2026.05.18</span>
+          {/* Legal Links & Build Info */}
+          <div className="flex flex-col items-center gap-4 border-t border-white/5 w-full pt-8">
+            <div className="flex items-center gap-6">
+              <button
+                onClick={() => navigate('/imprint')}
+                className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 hover:text-white transition-colors"
+              >
+                Impressum
+              </button>
+              <span className="text-white/15">·</span>
+              <button
+                onClick={() => navigate('/privacy')}
+                className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 hover:text-white transition-colors"
+              >
+                Datenschutz &amp; Tracking
+              </button>
+            </div>
+            <div className="flex flex-col items-center gap-2 opacity-25">
+              <span className="text-[9px] font-black uppercase tracking-[0.4em]">Early Access Build</span>
+              <div className="flex gap-8">
+                <span className="text-[8px] font-bold">v0.8.2-delta</span>
+                <span className="text-[8px] font-bold">2026.05.18</span>
+              </div>
             </div>
           </div>
         </footer>

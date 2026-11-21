@@ -67,6 +67,12 @@ function RouteSync() {
     } else if (segments[0] === 'create') {
       navigate('/', { replace: true })
       setTimeout(() => navigate('/create'), 0)
+    } else if (segments[0] === 'imprint') {
+      navigate('/', { replace: true })
+      setTimeout(() => navigate('/imprint'), 0)
+    } else if (segments[0] === 'privacy') {
+      navigate('/', { replace: true })
+      setTimeout(() => navigate('/privacy'), 0)
     }
   }, [location.pathname, navigate])
 
@@ -116,6 +122,8 @@ function App() {
         <Route path="/rename/:terrainId" element={null} />
         <Route path="/delete/:terrainId" element={null} />
         <Route path="/create" element={null} />
+        <Route path="/imprint" element={null} />
+        <Route path="/privacy" element={null} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

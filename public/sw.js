@@ -1,10 +1,11 @@
-const CACHE_NAME = 'delta-dynamics-cache-v2';
+const CACHE_NAME = 'delta-dynamics-cache-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
+  './fhooe-logo.svg',
   './manifest.webmanifest'
 ];
 

@@ -10,6 +10,13 @@ initPlausible({
   endpoint: 'https://analytics.mentawise.com/api/event',
   hashBasedRouting: true,
   autoCapturePageviews: false,
+  transformRequest: (payload) => {
+    const nav = navigator as Navigator & { globalPrivacyControl?: boolean }
+    if (nav.globalPrivacyControl === true || navigator.doNotTrack === '1') {
+      return null
+    }
+    return payload
+  },
 })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

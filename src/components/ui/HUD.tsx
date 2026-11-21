@@ -12,6 +12,8 @@ import { RenameModal } from './RenameModal'
 import { DeleteModal } from './DeleteModal'
 import { CreateModal } from './CreateModal'
 import { ControlHelper } from './ControlHelper'
+import { ImprintPage } from './ImprintPage'
+import { PrivacyPage } from './PrivacyPage'
 
 interface HUDProps {
   children: ReactNode
@@ -31,6 +33,8 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
   const renameMatch = useMatch('/rename/:terrainId')
   const deleteMatch = useMatch('/delete/:terrainId')
   const createMatch = useMatch('/create')
+  const imprintMatch = useMatch('/imprint')
+  const privacyMatch = useMatch('/privacy')
 
   return (
     <div className="relative h-screen w-screen bg-[#050505] text-white overflow-hidden select-none font-sans pointer-events-none">
@@ -108,6 +112,12 @@ export const HUD = ({ children, onInitAI, onConsultAI }: HUDProps) => {
       )}
       {createMatch && (
         <CreateModal />
+      )}
+      {imprintMatch && (
+        <ImprintPage />
+      )}
+      {privacyMatch && (
+        <PrivacyPage />
       )}
     </div>
   )

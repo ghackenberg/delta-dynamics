@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../hooks/useStore'
 
 interface BottomBarProps {
@@ -6,6 +7,7 @@ interface BottomBarProps {
 }
 
 export const BottomBar = ({ onInitAI, onConsultAI }: BottomBarProps) => {
+  const navigate = useNavigate()
   const aiStatus = useStore((state) => state.aiStatus)
   const isAiLoading = useStore((state) => state.isAiLoading)
   const aiResponse = useStore((state) => state.aiResponse)
@@ -70,11 +72,26 @@ export const BottomBar = ({ onInitAI, onConsultAI }: BottomBarProps) => {
             <span className="text-sm font-bold text-white tracking-wide">Dr. Georg Hackenberg</span>
             <span className="text-[9px] text-white/60 font-bold uppercase tracking-wide mt-0.5">Professor for Industrial Informatics</span>
             <span className="text-[8px] text-white/40 font-bold uppercase tracking-tight mt-0.5">School of Engineering | FH Upper Austria</span>
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); navigate('/imprint') }}
+                className="text-[8px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors"
+              >
+                Impressum
+              </button>
+              <span className="text-[8px] text-white/20">·</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); navigate('/privacy') }}
+                className="text-[8px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors"
+              >
+                Datenschutz
+              </button>
+            </div>
           </div>
         </div>
         <div className="h-10 w-10 bg-white/10 p-2 rounded-lg backdrop-blur-sm border border-white/10 flex items-center justify-center">
           <img
-            src="https://upload.wikimedia.org/wikipedia/de/e/e5/Fhooe-logo.svg"
+            src={`${import.meta.env.BASE_URL}fhooe-logo.svg`}
             alt="FH Upper Austria"
             className="w-full h-full object-contain brightness-0 invert opacity-80"
           />
